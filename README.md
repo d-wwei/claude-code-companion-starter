@@ -2,9 +2,9 @@
 
 [中文说明](./README.zh-CN.md)
 
-Prompt templates for turning Codex CLI into a more consistent long-term personal assistant workflow.
+Turn Codex CLI into a more consistent, workspace-aware, long-term personal assistant.
 
-This repository is for people who want Codex CLI to do more than answer one-off questions. The prompts here help it:
+Prompt templates for people who want Codex CLI to do more than answer one-off questions. These prompts help Codex:
 
 - keep a stable collaboration style
 - initialize local project memory structure
