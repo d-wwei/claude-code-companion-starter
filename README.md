@@ -153,6 +153,39 @@ That is the real point of the project: not just making Codex act smarter, but ma
 - `.assistant/` is a local project convention for memory and collaboration context, not a built-in Codex CLI protocol.
 - Actual behavior still depends on runtime instructions, tool permissions, and higher-priority context.
 
+## FAQ
+
+### Why not just use a single `AGENTS.md`?
+
+Because `AGENTS.md` is best at behavior rules, not at storing evolving collaboration context.
+
+If you put everything into one file, it becomes a mix of:
+
+- hard rules
+- style preferences
+- project history
+- temporary notes
+
+That is harder to maintain and easier to stale out. A small memory structure keeps those concerns separated.
+
+### Doesn't `.assistant/` make the workspace too heavy?
+
+It can, if overdesigned.
+
+That is why this prompt pack keeps the structure intentionally small and encourages incremental filling instead of full upfront documentation. The goal is not bureaucracy. The goal is just enough local memory to reduce repeated friction.
+
+### Who is this for?
+
+It is a good fit for people who use Codex CLI repeatedly in the same projects and want more continuity across sessions.
+
+It is less useful if you only use Codex for quick one-off prompts and do not want any local workflow structure.
+
+### Is this trying to turn Codex into OpenClaw?
+
+No.
+
+This project does not replace Codex CLI's native behavior. It borrows one useful idea from OpenClaw: treating the file system as a durable memory layer. The result is still Codex CLI, just with a more structured collaboration surface.
+
 ## Who This Is For
 
 This project is useful if you want Codex CLI to behave more like:
