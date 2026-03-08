@@ -2,105 +2,85 @@
 
 [中文说明](./README.zh-CN.md)
 
-Turn your CLI coding assistant into a consistent, workspace-aware, long-term personal companion.
+Turn Claude Code into a consistent, workspace-aware, long-term personal assistant — not a one-shot Q&A tool.
 
-This is a collection of prompt templates for **Claude Code**, **Codex CLI**, and **Gemini CLI**. Instead of treating these tools as stateless Q&A bots, these prompts help them:
+This is a one-click bootstrap prompt that transforms Claude Code by:
 
-- maintain a stable collaboration style across sessions
-- initialize structured project memory on the file system
-- avoid unnecessary rewrites of existing content
-- bootstrap user preferences through lightweight conversation
+- writing persistent global rules to `~/.claude/`
+- initializing structured project memory in `.assistant/`
+- running a lightweight bootstrap conversation to capture your preferences
+- making every future workspace entry feel continuous instead of starting from scratch
 
-## Why This Exists
-
-Raw prompts often assume an idealized agent with perfect memory. In practice, CLI coding assistants work better when instructions are:
-
-- explicit about file operations and safety
-- careful about preserving existing content
-- realistic about what global config can and cannot do
-- lightweight enough to stay out of the way during normal work
-
-These prompts are written around that reality, tested across three different CLI tools.
-
-## Supported CLI Tools
-
-| CLI Tool | Init Prompt | Global Config Path | Config File |
-| --- | --- | --- | --- |
-| **Claude Code** | [`step1-init.md`](./step1-init.md) | `~/.claude/` | `CLAUDE.md` (with `@` imports) |
-| **Codex CLI** | [`step1-init-codex.md`](./step1-init-codex.md) | `~/.codex/` | `AGENTS.md` (single file) |
-| **Gemini CLI** | [`step1-init-gemini.md`](./step1-init-gemini.md) | `~/.gemini/` | `GEMINI.md` (single file) |
-
-All three share the same `.assistant/` project-level memory structure. Switching between tools in the same workspace is seamless.
-
-## Core Idea: File System as External Memory
-
-This project borrows a key idea from [OpenClaw](https://docs.openclaw.ai/concepts/memory): treating the file system as durable working memory.
-
-CLI coding assistants are strong at instruction execution. But they are not naturally good at preserving collaboration context over time. This project bridges that gap by adding a structured memory layer:
-
-| Layer | Purpose |
-| --- | --- |
-| `~/.claude/` / `~/.codex/` / `~/.gemini/` | Global behavior rules that apply to all projects |
-| `.assistant/` | Per-project memory: user profile, style, workflow, project decisions |
-
-### What This Changes
-
-- Preferences and rules stop living only in chat history
-- Project decisions survive across sessions
-- Temporary notes and stable preferences are cleanly separated
-- Re-entering a workspace feels continuous instead of starting from scratch
-
-### Concrete Examples
-
-1. **Style stays stable.** "Be concise, give conclusions first, then risks" lives in `STYLE.md`, not repeated prompts.
-2. **Decisions persist.** "Don't split the service yet" lives in `memory/projects/architecture.md`, not re-debated each session.
-3. **Workflow is personalized.** "Inspect first, explain briefly, then edit, then verify" lives in `WORKFLOW.md`.
-4. **Temporary context stays temporary.** "This API doc is unverified" goes to `memory/daily/YYYY-MM-DD.md`, not permanent memory.
+**One run is all it takes.** After that, Claude Code will automatically initialize any new project and remember how you work.
 
 ## What's Included
 
-### One-Click Init Prompts (Recommended)
-
-These prompts set up both global rules and project-level memory in a single shot:
-
-- [`step1-init.md`](./step1-init.md) — **Claude Code** init prompt
-- [`step1-init-codex.md`](./step1-init-codex.md) — **Codex CLI** init prompt
-- [`step1-init-gemini.md`](./step1-init-gemini.md) — **Gemini CLI** init prompt
-- [`claude-code-personal-assistant-bootstrap-prompt.md`](./claude-code-personal-assistant-bootstrap-prompt.md) — Claude Code prompt overview and usage guide
-
-### Codex CLI Prompt Variants
-
-Three strength levels for Codex CLI, depending on how proactive you want it to be:
-
-- [`codex-cli-personal-assistant-prompt-safe.md`](./codex-cli-personal-assistant-prompt-safe.md) — Inspect first, change later. Best for first-time setup.
-- [`codex-cli-personal-assistant-prompt-lite.md`](./codex-cli-personal-assistant-prompt-lite.md) — Balanced default for day-to-day use.
-- [`codex-cli-personal-assistant-prompt-strong.md`](./codex-cli-personal-assistant-prompt-strong.md) — Proactive setup for greenfield projects.
-- [`codex-cli-personal-assistant-prompt-comparison.md`](./codex-cli-personal-assistant-prompt-comparison.md) — Side-by-side comparison of all three variants.
+| File | Purpose |
+| --- | --- |
+| [`step1-init.md`](./step1-init.md) | The bootstrap prompt — copy the `text` block and send to Claude Code |
+| [`claude-code-personal-assistant-bootstrap-prompt.md`](./claude-code-personal-assistant-bootstrap-prompt.md) | Prompt overview: what it does, what it writes, built-in optimizations |
 
 ## Quick Start
-
-### Claude Code
 
 1. Open [`step1-init.md`](./step1-init.md).
 2. Copy the full `text` code block.
 3. Send it to Claude Code in your target workspace.
-4. Claude Code will set up `~/.claude/` and `.assistant/`, then start a bootstrap conversation.
+4. Claude Code will:
+   - Set up `~/.claude/` with global assistant rules (with `@` import compatibility check)
+   - Create `.assistant/` project memory structure
+   - Start a bootstrap conversation (how to address you, your role, preferred style)
 
-### Codex CLI
+> **One-time setup.** Global rules persist permanently. For each new project, Claude Code will automatically initialize `.assistant/` and bootstrap.
 
-1. Open [`step1-init-codex.md`](./step1-init-codex.md).
-2. Copy the full `text` code block.
-3. Send it to Codex CLI in your target workspace.
-4. Codex CLI will set up `~/.codex/AGENTS.md` and `.assistant/`, then start bootstrap.
+## Core Idea: File System as External Memory
 
-### Gemini CLI
+Inspired by [OpenClaw's memory model](https://docs.openclaw.ai/concepts/memory), this prompt uses the file system as a durable collaboration layer.
 
-1. Open [`step1-init-gemini.md`](./step1-init-gemini.md).
-2. Copy the full `text` code block.
-3. Send it to Gemini CLI in your target workspace.
-4. Gemini CLI will set up `~/.gemini/GEMINI.md` and `.assistant/`, then start bootstrap.
+### The Two Layers
 
-> **One-time setup.** You only need to run the init prompt once. Global rules persist permanently. For each new project, the assistant will automatically initialize `.assistant/` and start bootstrap.
+| Layer | Path | Purpose |
+| --- | --- | --- |
+| Global | `~/.claude/` | Behavior rules that apply everywhere: role, read order, conflict resolution, memory policy |
+| Project | `.assistant/` | Per-project memory: user profile, style, workflow, decisions, daily context |
+
+### Why This Matters
+
+Without structured memory, you repeat yourself every session:
+- how you want answers structured
+- what role you play in the workspace
+- which tradeoffs the project already made
+- where the last session stopped
+
+With `.assistant/`, these become editable project assets:
+
+| File | Stores |
+| --- | --- |
+| `USER.md` | Who you are: name, role, context |
+| `STYLE.md` | Communication style: concise vs detailed, tone |
+| `WORKFLOW.md` | How work is done: report structure, decision preferences |
+| `MEMORY.md` | Long-term reusable facts and preferences |
+| `memory/projects/*.md` | Project-specific decisions and cross-session context |
+| `memory/daily/*.md` | Temporary daily notes (auto-lifecycle: 7→promote, 14→suggest delete) |
+| `runtime/inbox.md` | Short-lived action items and reminders |
+| `runtime/last-session.md` | Last session summary and next steps |
+
+## Built-in Optimizations
+
+The prompt includes 13 production-hardened optimizations:
+
+1. `@` import compatibility detection + merged fallback
+2. Idempotency check (3-line content rule)
+3. Post-write file verification
+4. Daily log lifecycle (7/14 day cleanup)
+5. `last-session.md` write timing rules
+6. Memory conflict resolution
+7. Bootstrap completion state persistence
+8. Question priority tiers (must-ask / should-ask / accumulate naturally)
+9. User audit rights (view / delete / export / monthly reminder)
+10. `.gitignore` auto-handling
+11. Template system (customizable during bootstrap)
+12. Quick review entry ("查看我的配置" / "review my setup")
+13. Workspace confirmation (prevents `.assistant/` in non-project dirs)
 
 ## Project Memory Structure
 
@@ -108,9 +88,9 @@ Three strength levels for Codex CLI, depending on how proactive you want it to b
 .assistant/
   SYSTEM.md          — workspace-level rules and safety boundaries
   USER.md            — who the user is: name, role, context, language
-  STYLE.md           — communication style: concise vs detailed, tone
-  WORKFLOW.md        — how work is done: report structure, decision preferences
-  TOOLS.md           — tool preferences: common dirs, preferred tools
+  STYLE.md           — communication style preferences
+  WORKFLOW.md        — how work is done
+  TOOLS.md           — tool preferences and boundaries
   MEMORY.md          — concise long-term reusable memory
   BOOTSTRAP.md       — bootstrap state tracking
   memory/
@@ -128,25 +108,21 @@ Three strength levels for Codex CLI, depending on how proactive you want it to b
 - Incremental edits over destructive rewrites
 - Project-local memory over assumed global omniscience
 - Lightweight bootstrap over long onboarding forms
-- Realistic compatibility with each CLI tool's actual behavior
+- Realistic compatibility with Claude Code's actual behavior
 
 ## FAQ
 
-### Why not just use a single config file (`CLAUDE.md` / `AGENTS.md`)?
+### Why not just use `CLAUDE.md`?
 
-Config files are best for behavior rules, not evolving collaboration context. A small memory structure keeps rules, preferences, project history, and temporary notes cleanly separated.
+`CLAUDE.md` is great for behavior rules. But real collaboration also involves evolving preferences, project history, and temporary context. A small memory structure keeps these cleanly separated and maintainable.
 
-### Does `.assistant/` make the workspace too heavy?
+### Does `.assistant/` make the workspace heavy?
 
-Not if kept small. These prompts intentionally keep the structure minimal and fill it incrementally. The goal is just enough local memory to reduce repeated friction.
-
-### Can I use multiple CLI tools in the same project?
-
-Yes. All three tools share the same `.assistant/` structure. You can switch between Claude Code, Codex CLI, and Gemini CLI in the same workspace — they will all read from and write to the same project memory.
+Not if kept small. The prompt intentionally keeps the structure minimal and fills it incrementally. Just enough local memory to reduce repeated friction.
 
 ### Who is this for?
 
-People who use CLI coding assistants repeatedly in the same projects and want more continuity across sessions. If you only use them for quick one-off prompts, this adds unnecessary structure.
+People who use Claude Code repeatedly in the same projects and want more continuity across sessions. Not needed for quick one-off prompts.
 
 ## License
 
