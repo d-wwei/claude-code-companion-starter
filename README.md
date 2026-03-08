@@ -2,122 +2,143 @@
 
 [中文说明](./README.zh-CN.md)
 
-Turn Claude Code into a consistent, workspace-aware, long-term personal assistant — not a one-shot Q&A tool.
+Turn Claude Code into a more consistent, workspace-aware, long-term personal assistant.
 
-This is a one-click bootstrap prompt that transforms Claude Code by:
+A bootstrap prompt starter for people who want Claude Code to do more than answer one-off questions. It helps Claude Code establish a durable collaboration layer through global rules in `~/.claude/` and project-local memory in `.assistant/`.
 
-- writing persistent global rules to `~/.claude/`
-- initializing structured project memory in `.assistant/`
-- running a lightweight bootstrap conversation to capture your preferences
-- making every future workspace entry feel continuous instead of starting from scratch
+## Why This Exists
 
-**One run is all it takes.** After that, Claude Code will automatically initialize any new project and remember how you work.
+Many "personal assistant" prompts look good on paper but become unreliable in real CLI workflows. Common problems include:
 
-## Quick Start
+- over-relying on chat history that vanishes between sessions
+- mixing long-term rules with temporary project notes
+- treating generated file content as if it were real file operations
+- forcing heavy startup behavior on every task
 
-1. Open [`claude-code-companion-bootstrap.md`](./claude-code-companion-bootstrap.md).
-2. Copy the full `text` code block (~210 lines).
-3. Send it to Claude Code in your target workspace.
-4. Claude Code will:
-   - Set up `~/.claude/` with global assistant rules (with `@` import compatibility check)
-   - Create `.assistant/` project memory structure
-   - Start a bootstrap conversation (how to address you, your role, preferred style)
+This repository is designed around those realities.
 
-> **One-time setup.** Global rules persist permanently — every new project gets auto-initialized from then on. You never need to send the prompt again.
+Instead of assuming the model will remember everything, it uses the file system as a durable collaboration surface that Claude Code can re-read and update over time.
 
-## What the Prompt Does
+## Why OpenClaw-Inspired Memory For Claude Code
 
-### Global Layer `~/.claude/`
+Claude Code is strong at following instructions, reading repositories, and editing files. But that does not automatically make it a long-term collaboration system.
 
-| File | Purpose |
-| --- | --- |
-| `CLAUDE.md` | Entry file, `@` imports other rules (auto-merges if `@` not supported) |
-| `assistant-core.md` | Role behavior, read order, conflict resolution, quick review entry |
-| `bootstrap-rules.md` | Cold start rules: tiered questions, state tracking, completion persistence |
-| `memory-policy.md` | Memory write / conflict / cleanup / audit rules |
-| `project-filesystem.md` | Project file structure definition, Git safety handling |
+OpenClaw-style memory systems are useful because they treat files as durable memory artifacts rather than leaving everything in chat history. That idea maps well to Claude Code:
 
-### Project Layer `.assistant/`
+- stable preferences belong in structured files
+- project decisions should survive across sessions
+- temporary notes should stay separate from long-term memory
 
-Auto-created per project:
+This repository adapts that philosophy to Claude Code by combining:
 
-```
-.assistant/
-  SYSTEM.md          — workspace-level rules and safety boundaries
-  USER.md            — who the user is: name, role, context, language
-  STYLE.md           — communication style preferences
-  WORKFLOW.md        — how work is done
-  TOOLS.md           — tool preferences and boundaries
-  MEMORY.md          — concise long-term reusable memory
-  BOOTSTRAP.md       — bootstrap state tracking
-  memory/
-    daily/           — short-lived daily context (YYYY-MM-DD.md)
-    projects/        — project-level cross-session memory
-  templates/         — reusable starter templates
-  runtime/
-    inbox.md         — short-lived action items
-    last-session.md  — last session summary
-```
+- `~/.claude/` for global behavior defaults
+- `.assistant/` for project-local memory and collaboration context
 
-## Core Idea: File System as External Memory
+The result is not "turning Claude Code into OpenClaw". The result is giving Claude Code a more structured memory surface so it can feel less stateless and more like a repeatable collaborator.
 
-Inspired by [OpenClaw's memory model](https://docs.openclaw.ai/concepts/memory), this prompt uses the file system as a durable collaboration layer.
+## What This Changes
+
+- preferences and collaboration habits stop living only in chat history
+- project context becomes inspectable and editable
+- temporary context and durable memory are stored separately
+- Claude Code can re-enter a workspace with better continuity
+
+## Concrete Examples
+
+1. Style becomes stable across sessions.  
+   Preferences such as "be concise, give the conclusion first, then risks" can live in `.assistant/STYLE.md`.
+
+2. Project decisions stop resetting.  
+   If a project already decided to postpone a large refactor, that can live in `.assistant/memory/projects/architecture.md`.
+
+3. Temporary context stops polluting permanent rules.  
+   One-day notes or unverified facts can live in `.assistant/memory/daily/YYYY-MM-DD.md`.
+
+4. Workflow becomes personalized.  
+   If you prefer "inspect first, explain the change briefly, then report verification", that can live in `.assistant/WORKFLOW.md`.
+
+## How It Works
+
+This starter uses two layers:
 
 | Layer | Path | Purpose |
 | --- | --- | --- |
-| Global | `~/.claude/` | Behavior rules that apply everywhere: role, read order, conflict resolution, memory policy |
-| Project | `.assistant/` | Per-project memory: user profile, style, workflow, decisions, daily context |
+| Global | `~/.claude/` | behavior defaults, read order, bootstrap rules, memory policy |
+| Project | `.assistant/` | user profile, style, workflow, project memory, daily notes |
 
-### Why This Matters
+Claude Code reads the durable file structure instead of depending only on ephemeral conversation state.
 
-Without structured memory, you repeat yourself every session:
-- how you want answers structured
-- what role you play in the workspace
-- which tradeoffs the project already made
-- where the last session stopped
+## What's Included
 
-With `.assistant/`, these become editable project assets instead of fragile chat leftovers.
+- [claude-code-companion-bootstrap.md](./claude-code-companion-bootstrap.md)  
+  The main bootstrap prompt for Claude Code.
 
-## Built-in Optimizations
+- [README.zh-CN.md](./README.zh-CN.md)  
+  Chinese documentation.
 
-The prompt includes 13 production-hardened optimizations:
+- [LICENSE](./LICENSE)  
+  MIT license.
 
-1. `@` import compatibility detection + merged fallback
-2. Idempotency check (3-line content rule)
-3. Post-write file verification
-4. Daily log lifecycle (7/14 day cleanup)
-5. `last-session.md` write timing rules
-6. Memory conflict resolution
-7. Bootstrap completion state persistence (`status` field)
-8. Question priority tiers (must-ask / should-ask / accumulate naturally)
-9. User audit rights (view / delete / export / monthly reminder)
-10. `.gitignore` auto-handling
-11. Template system (customizable during bootstrap)
-12. Quick review entry ("查看我的配置" / "review my setup")
-13. Workspace confirmation (prevents `.assistant/` in non-project dirs)
+## Quick Start
+
+1. Open [claude-code-companion-bootstrap.md](./claude-code-companion-bootstrap.md).
+2. Copy the full `text` code block.
+3. Start Claude Code in your target workspace.
+4. Send the prompt in one message.
+5. Let Claude Code inspect the workspace, update config, and start lightweight bootstrap if needed.
+
+## How This Prompt Is Positioned
+
+This repository provides one main prompt starter, not multiple variants.
+
+It is best understood as a structured full setup version:
+
+- proactive enough to initialize global and project layers
+- explicit about file creation and verification
+- opinionated about memory structure and bootstrap flow
 
 ## Design Principles
 
-- Default preference layer, not hard control layer
-- Incremental edits over destructive rewrites
-- Project-local memory over assumed global omniscience
-- Lightweight bootstrap over long onboarding forms
-- Realistic compatibility with Claude Code's actual behavior
+- Global defaults should guide behavior, not claim permanent hard control
+- Project-local memory should carry evolving context
+- Temporary notes should not pollute long-term memory
+- Incremental edits are safer than destructive rewrites
+- Real CLI behavior matters more than idealized agent theory
+
+## Important Boundaries
+
+- `~/.claude/` should be treated as a default behavior layer, not a guaranteed permanent control layer.
+- `.assistant/` is a project-local memory convention, not a native Claude Code protocol.
+- Actual behavior still depends on runtime context, available tools, and higher-priority instructions.
 
 ## FAQ
 
 ### Why not just use `CLAUDE.md`?
 
-`CLAUDE.md` is great for behavior rules. But real collaboration also involves evolving preferences, project history, and temporary context. A small memory structure keeps these cleanly separated and maintainable.
+Because behavior rules and collaboration memory are different things.
 
-### Does `.assistant/` make the workspace heavy?
+`CLAUDE.md` is good for stable defaults. But project history, user preferences, temporary notes, and unfinished work fit better in a small memory structure.
 
-Not if kept small. The prompt intentionally keeps the structure minimal and fills it incrementally. Just enough local memory to reduce repeated friction.
+### Doesn't `.assistant/` add too much overhead?
+
+It can, if overbuilt.
+
+This starter keeps the structure intentionally small. The goal is not bureaucracy. The goal is reducing repeated friction in ongoing work.
+
+### Is this trying to replace Claude Code?
+
+No.
+
+This is a prompt-layer workflow enhancement. Claude Code still does the actual work. This repository simply gives it a more durable collaboration structure.
 
 ### Who is this for?
 
-People who use Claude Code repeatedly in the same projects and want more continuity across sessions. Not needed for quick one-off prompts.
+It is a good fit for people who use Claude Code repeatedly in the same projects and want more continuity across sessions.
 
-## License
+It is less useful if you only want quick one-off prompts with no local memory structure.
 
-[MIT](./LICENSE)
+## Notes
+
+If Claude Code behaves too aggressively in your environment, tighten the prompt or reduce the initialization scope.
+
+If it is too passive, strengthen the execution instructions around file creation, verification, and bootstrap follow-through.
