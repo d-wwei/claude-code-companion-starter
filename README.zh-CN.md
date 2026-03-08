@@ -1,205 +1,153 @@
-# Codex CLI 个人助理初始化提示词合集
+# Claude Code Companion Starter
 
 [English](./README.md)
 
-把 Codex CLI 调整成一个更稳定、更懂工作区上下文、适合长期协作的个人助理。
+把你的 CLI 编程助手改造成稳定、有工作区感知、适合长期协作的个人伙伴。
 
-这是一组为 Codex CLI 设计的提示词模板，用来把它从一次性问答工具，调整为更稳定、更适合长期协作的本地个人助理工作流。
+这是一组为 **Claude Code**、**Codex CLI** 和 **Gemini CLI** 设计的提示词模板。与其把它们当成无状态的一次性问答工具，这些提示词能让它们：
 
-这些提示词的目标不是“幻想一个完美代理”，而是基于 Codex CLI 的真实行为模型，尽量做到：
-
-- 协作风格更稳定
-- 能初始化项目本地记忆结构
-- 尽量避免粗暴重写已有内容
-- 用轻量 bootstrap 逐步补齐用户偏好
-
-为了适配不同环境，这个仓库提供了三个执行强度不同的版本。
+- 跨会话保持稳定的协作风格
+- 在文件系统上初始化结构化项目记忆
+- 避免不必要地重写已有内容
+- 通过轻量对话逐步 bootstrap 用户偏好
 
 ## 这个仓库解决什么问题
 
-很多“个人助理型提示词”写得很完整，但不一定适合 Codex CLI 的真实执行方式。常见问题包括：
+很多"个人助理型提示词"写得很完整，但在实际 CLI 使用中经常会遇到：
 
-- 对全局配置的控制能力估计过高
+- 对全局配置控制能力估计过高
 - 要求每次都读取过多文件
-- 过度流程化，容易阻塞正常任务
+- 过度流程化，阻塞正常任务
 - 对已有内容的保护不够
 
-这个仓库的提示词就是围绕这些现实约束做的收敛版。
+这些提示词就是围绕这些真实约束做的收敛版，经过三种不同 CLI 工具的实际测试。
 
-## 为什么要用 OpenClaw 风格记忆系统改造 Codex CLI
+## 支持的 CLI 工具
 
-Codex CLI 和 OpenClaw 的强项并不一样。
+| CLI 工具 | 初始化提示词 | 全局配置路径 | 配置文件 |
+| --- | --- | --- | --- |
+| **Claude Code** | [`step1-init.md`](./step1-init.md) | `~/.claude/` | `CLAUDE.md`（支持 `@` 导入） |
+| **Codex CLI** | [`step1-init-codex.md`](./step1-init-codex.md) | `~/.codex/` | `AGENTS.md`（单文件合并） |
+| **Gemini CLI** | [`step1-init-gemini.md`](./step1-init-gemini.md) | `~/.gemini/` | `GEMINI.md`（单文件合并） |
 
-Codex CLI 天生更擅长“规则分层”和“执行任务”。它的 `AGENTS.md` 机制适合按作用域加载规则，例如全局默认规则、仓库规则和局部覆盖规则。这让它很适合承接行为约束和工作流要求，但并不天然等于“长期结构化记忆系统”。[Codex AGENTS.md 文档](https://developers.openai.com/codex/guides/agents-md)
+三种工具共享同一套 `.assistant/` 项目级记忆结构。在同一个工作区内切换工具是无缝的。
 
-OpenClaw 的思路不同。它把 Markdown 文件当成工作记忆的一部分，让 daily log 和长期 memory 作为工作区中的明确资产存在。这种设计更适合跨会话保存协作上下文。[OpenClaw memory 文档](https://docs.openclaw.ai/concepts/memory)
+## 核心理念：文件系统即外部记忆
 
-这个仓库做的事情，就是借鉴这种记忆哲学，把它适配到 Codex CLI 上。
+这个项目借鉴了 [OpenClaw](https://docs.openclaw.ai/concepts/memory) 的一个关键思路：把文件系统当作持久化的工作记忆。
 
-目标不是假装 Codex CLI 原生就拥有同样的持久记忆能力，而是把文件系统用作“外部记忆层”，让 Codex 少一点“每次重新认识你”的工具感，多一点“持续协作”的连续性。
+CLI 编程助手天生擅长执行指令，但不擅长跨会话保存协作上下文。这个项目通过结构化记忆层来弥补这个差距：
+
+| 层级 | 用途 |
+| --- | --- |
+| `~/.claude/` / `~/.codex/` / `~/.gemini/` | 全局行为规则，适用于所有项目 |
+| `.assistant/` | 项目级记忆：用户画像、风格、工作流、项目决策 |
 
 ### 它改变了什么
 
-- 规则和偏好不再只散落在聊天记录里
+- 偏好和规则不再只散落在聊天记录里
 - 项目决策可以跨会话保留
-- 临时信息和长期信息可以分层存放
-- Codex 重新进入工作区时会更有连续性
-
-### 为什么会显得更“人性化”
-
-这里的“更人性化”不是指语气更像人，而是协作体验更连续。
-
-如果只有原始提示词，你通常要反复重讲这些东西：
-
-- 你希望它怎么组织答案
-- 你在这个工作区里是什么角色
-- 这个项目之前已经做过哪些取舍
-- 上一次停在什么位置
-
-如果这些信息能进入 `.assistant/STYLE.md`、`.assistant/WORKFLOW.md`、`.assistant/MEMORY.md`、`memory/projects/*.md` 这样的结构里，它们就会变成可编辑、可审计、可持续演化的项目资产，而不是容易散失的聊天残留。
-
-这样一来，Codex 会更容易做到：
-
-- 更稳定地按你的格式回答
-- 少重复那些已经定过的项目讨论
-- 更贴近你习惯的推进方式
-
-### 为什么它更能跟随用户成长
-
-`AGENTS.md` 更适合承载稳定规则。
-
-但真实协作里还有很多东西是会慢慢变化的，例如表达偏好、常见工作流、项目历史决策、最近一次做到哪里。这些内容比起塞进一个总规则文件，更适合进入分层记忆结构。
-
-一个好的外部记忆层，可以让 Codex 随着使用逐步沉淀：
-
-- 稳定的表达偏好
-- 常见协作方式
-- 项目约束和历史决策
-- 最近会话留下的待续上下文
-
-这比把所有内容都挤进一个全局规则文件，更适合长期使用。
+- 临时信息和长期偏好可以分层存放
+- 重新进入工作区更有连续性，而非从零开始
 
 ### 具体例子
 
-1. 表达风格不再每次重讲。  
-   比如“默认中文、先给结论、再讲风险、保持简洁”，这些偏好可以进入 `STYLE.md`。
-
-2. 项目决策不会轻易重置。  
-   比如“当前阶段不拆微服务”的原因，可以放进 `memory/projects/architecture.md`，避免下次又从零开始讨论。
-
-3. 工作推进方式可以个性化。  
-   比如“先检查代码、改前简述、改后说明验证结果”，这些习惯可以沉淀到 `WORKFLOW.md`。
-
-4. 临时信息不会污染长期记忆。  
-   比如“这个接口文档还没确认”“今天先出方案不改代码”这类短期上下文，更适合放进 `memory/daily/YYYY-MM-DD.md`。
-
-### 它在工程上的真正意义
-
-这种做法并不是替换 Codex CLI 的原生能力。
-
-它更像是在 Codex 已有能力之上，补上一层结构化外部记忆：
-
-- Codex 负责读取规则和执行任务
-- 文件系统负责承载长期协作记忆
-- 这套提示词负责把两者连接起来
-
-这才是这个仓库真正的价值：不只是让 Codex 看起来更聪明，而是让它随着时间变得更顺手、更像一个长期协作者。
+1. **表达风格不再每次重讲。** "先给结论、再讲风险、保持简洁" 进入 `STYLE.md`，不用反复 prompt。
+2. **项目决策不会轻易重置。** "当前阶段不拆微服务" 进入 `memory/projects/architecture.md`，不用每次重新讨论。
+3. **工作推进方式可以个性化。** "先检查代码、改前简述、改后说明验证结果" 沉淀到 `WORKFLOW.md`。
+4. **临时信息不会污染长期记忆。** "这个接口文档还没确认" 进入 `memory/daily/YYYY-MM-DD.md`。
 
 ## 仓库内容
 
-- [codex-cli-personal-assistant-prompt-safe.md](./codex-cli-personal-assistant-prompt-safe.md)  
-  先审查、后修改。适合第一次试用和已有环境较复杂的情况。
+### 一键初始化提示词（推荐）
 
-- [codex-cli-personal-assistant-prompt-lite.md](./codex-cli-personal-assistant-prompt-lite.md)  
-  平衡版，适合作为大多数场景下的默认版本。
+这些提示词会一次性完成全局规则 + 项目级记忆的初始化：
 
-- [codex-cli-personal-assistant-prompt-strong.md](./codex-cli-personal-assistant-prompt-strong.md)  
-  更强执行版，适合新项目或你明确希望 Codex 主动推进初始化时使用。
+- [`step1-init.md`](./step1-init.md) — **Claude Code** 初始化提示词
+- [`step1-init-codex.md`](./step1-init-codex.md) — **Codex CLI** 初始化提示词
+- [`step1-init-gemini.md`](./step1-init-gemini.md) — **Gemini CLI** 初始化提示词
+- [`claude-code-personal-assistant-bootstrap-prompt.md`](./claude-code-personal-assistant-bootstrap-prompt.md) — Claude Code 提示词说明文档
 
-- [codex-cli-personal-assistant-prompt-comparison.md](./codex-cli-personal-assistant-prompt-comparison.md)  
-  三个版本的横向对比表。
+### Codex CLI 多强度版本
+
+三个执行强度不同的 Codex CLI 版本：
+
+- [`codex-cli-personal-assistant-prompt-safe.md`](./codex-cli-personal-assistant-prompt-safe.md) — 先审查、后修改。适合第一次试用。
+- [`codex-cli-personal-assistant-prompt-lite.md`](./codex-cli-personal-assistant-prompt-lite.md) — 平衡版，适合日常默认使用。
+- [`codex-cli-personal-assistant-prompt-strong.md`](./codex-cli-personal-assistant-prompt-strong.md) — 更强执行版，适合新项目。
+- [`codex-cli-personal-assistant-prompt-comparison.md`](./codex-cli-personal-assistant-prompt-comparison.md) — 三个版本的横向对比表。
 
 ## 快速开始
 
-1. 打开你要使用的提示词文件。
-2. 复制其中完整的 `text` 代码块。
-3. 在目标工作区里发给 Codex CLI。
-4. 让 Codex 进行工作区检查、配置更新，并在合适时进入轻量 bootstrap。
+### Claude Code
 
-## 怎么选
+1. 打开 [`step1-init.md`](./step1-init.md)
+2. 复制其中完整的 `text` 代码块
+3. 在目标工作区里发给 Claude Code
+4. Claude Code 会完成 `~/.claude/` 和 `.assistant/` 的初始化，然后自动进入 bootstrap 对话
 
-| 场景 | 推荐版本 |
-| --- | --- |
-| 第一次试这套工作流 | `safe` |
-| 作为长期默认方案使用 | `lite` |
-| 新项目，希望更主动地完成初始化 | `strong` |
-| 当前环境里已有较多手写配置 | `safe` |
+### Codex CLI
 
-## 推荐使用顺序
+1. 打开 [`step1-init-codex.md`](./step1-init-codex.md)
+2. 复制其中完整的 `text` 代码块
+3. 在目标工作区里发给 Codex CLI
+4. Codex CLI 会完成 `~/.codex/AGENTS.md` 和 `.assistant/` 的初始化，然后进入 bootstrap
 
-1. 先用 `safe` 观察 Codex 在你环境里的真实行为。
-2. 跑顺之后，日常默认切到 `lite`。
-3. 明确需要更强推进时，再使用 `strong`。
+### Gemini CLI
+
+1. 打开 [`step1-init-gemini.md`](./step1-init-gemini.md)
+2. 复制其中完整的 `text` 代码块
+3. 在目标工作区里发给 Gemini CLI
+4. Gemini CLI 会完成 `~/.gemini/GEMINI.md` 和 `.assistant/` 的初始化，然后进入 bootstrap
+
+> **只需执行一次。** 全局规则写入后永久生效。以后进入任何新项目，助手会自动初始化 `.assistant/` 并开始 bootstrap。
+
+## 项目记忆结构
+
+```
+.assistant/
+  SYSTEM.md          — 工作区级系统规则和安全边界
+  USER.md            — 用户画像：姓名、角色、上下文、语言
+  STYLE.md           — 沟通风格：简洁 vs 详细、语气、格式
+  WORKFLOW.md        — 工作方式：报告结构、决策偏好
+  TOOLS.md           — 工具偏好：常用目录、首选工具、边界
+  MEMORY.md          — 精炼的长期可复用记忆
+  BOOTSTRAP.md       — Bootstrap 状态追踪
+  memory/
+    daily/           — 短期日常上下文（YYYY-MM-DD.md）
+    projects/        — 项目级跨会话记忆
+  templates/         — 可复用的模板
+  runtime/
+    inbox.md         — 短期待办事项
+    last-session.md  — 上次会话摘要
+```
 
 ## 设计原则
 
 - 把全局配置当成默认偏好层，而不是强控制层
 - 优先增量编辑，而不是破坏性重写
-- 强调项目本地记忆，而不是假设全局“全知”
+- 强调项目本地记忆，而不是假设全局"全知"
 - 用轻量 bootstrap 代替冗长问卷
-- 尽量贴近 Codex CLI 的真实行为边界
-
-## 重要边界
-
-- `~/.codex/AGENTS.md` 更适合被理解为默认偏好层，不是永久强制控制层。
-- `.assistant/` 是项目本地记忆约定，不是 Codex CLI 天然内建协议。
-- 最终效果仍然取决于当前会话上下文、工具权限和更高优先级指令。
+- 尽量贴近每种 CLI 工具的真实行为边界
 
 ## FAQ
 
-### 为什么不直接只用一个 `AGENTS.md`？
+### 为什么不直接只用一个配置文件（`CLAUDE.md` / `AGENTS.md`）？
 
-因为 `AGENTS.md` 更适合放行为规则，不太适合承载不断演化的协作上下文。
-
-如果把所有东西都塞进一个文件，里面会混在一起：
-
-- 硬规则
-- 表达偏好
-- 项目历史
-- 临时备注
-
-这样既难维护，也更容易过时。把记忆拆成一个小型结构，会更清晰。
+配置文件更适合放行为规则，不适合承载不断演化的协作上下文。用一个小型记忆结构把规则、偏好、项目历史、临时信息分层存放，更清晰也更好维护。
 
 ### `.assistant/` 会不会让工作区变得太重？
 
-会，如果设计过头。
+不会，如果控制得当。这套提示词刻意把结构保持很小，强调按需、增量补充。目标不是制造流程负担，而是用尽量少的本地记忆减少重复磨合。
 
-所以这套提示词刻意把结构控制得比较小，并强调按需、增量补充，而不是一开始就写满整套文档。目标不是制造流程负担，而是用尽量少的本地记忆，减少重复磨合。
+### 可以在同一个项目里使用多种 CLI 工具吗？
+
+可以。三种工具共享同一套 `.assistant/` 结构。你可以在同一个工作区内自由切换 Claude Code、Codex CLI、Gemini CLI——它们都会读写同一份项目记忆。
 
 ### 这套方案适合谁？
 
-它更适合那些会在同一个项目里反复使用 Codex CLI、希望跨会话保持连续性的人。
+适合在同一个项目里反复使用 CLI 编程助手、希望跨会话保持连续性的人。如果你只是偶尔发几个一次性 prompt，这套结构就不太必要。
 
-如果你只是偶尔发几个一次性 prompt，不想要任何本地工作流结构，那它的价值就没那么大。
+## 许可证
 
-### 这是不是想把 Codex 变成 OpenClaw？
-
-不是。
-
-这个项目并不是替换 Codex CLI 的原生能力，而是借用了 OpenClaw 的一个关键思路：把文件系统当作可持续记忆层。最后得到的仍然是 Codex CLI，只是协作界面更结构化了。
-
-## 适合谁用
-
-如果你希望 Codex CLI 更像下面这些角色，这个仓库会比较有用：
-
-- 可重复使用的项目助理
-- 对工作区有感知的协作者
-- 能维护轻量本地上下文的工具
-
-如果你只需要偶尔发一个一次性 prompt，不关心本地结构和长期协作，这个仓库的价值会小一些。
-
-## 备注
-
-如果 Codex 在你的环境里表现得过于激进，就退回 `safe`。
-
-如果它推进不足、总是太保守，就切到 `strong`。
+[MIT](./LICENSE)
