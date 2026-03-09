@@ -2,6 +2,9 @@
 
 [English](./README.md)
 
+> **正在寻找其他 CLI 助手的版本？**
+> 看看兄弟扩展项目：[Gemini Companion Starter](https://github.com/d-wwei/gemini-companion-starter) & [Codex Companion Starter](https://github.com/d-wwei/Codex-companion-starter)
+
 把 Claude Code 调整成一个更稳定、更懂工作区上下文、适合长期协作的个人助理。
 
 这是一个面向 Claude Code 的 bootstrap 提示词启动方案，适合那些不满足于"一次性问答"，而希望 Claude Code 通过 `~/.claude/` 和 `.assistant/` 建立持续协作结构的人。

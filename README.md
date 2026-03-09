@@ -2,6 +2,9 @@
 
 [中文说明](./README.zh-CN.md)
 
+> **Looking for other CLI assistants?** 
+> Check out the sister extensions: [Gemini Companion Starter](https://github.com/d-wwei/gemini-companion-starter) & [Codex Companion Starter](https://github.com/d-wwei/Codex-companion-starter)
+
 Turn Claude Code into a more consistent, workspace-aware, long-term personal assistant.
 
 A bootstrap prompt starter for people who want Claude Code to do more than answer one-off questions. It helps Claude Code establish a durable collaboration layer through global rules in `~/.claude/` and project-local memory in `.assistant/`.
