@@ -5,9 +5,9 @@
 > **Looking for other CLI assistants?** 
 > Check out the sister extensions: [Gemini Companion Starter](https://github.com/d-wwei/gemini-companion-starter) & [Codex Companion Starter](https://github.com/d-wwei/Codex-companion-starter)
 
-Turn Claude Code into a more consistent, workspace-aware, long-term personal assistant.
+Turn Claude Code into a more consistent, workspace-aware, long-term personal assistant deployment pack.
 
-A bootstrap prompt starter for people who want Claude Code to do more than answer one-off questions. It helps Claude Code establish a durable collaboration layer through global rules in `~/.claude/` and project-local memory in `.assistant/`.
+A deployment-ready package for people who want Claude Code to do more than answer one-off questions. It helps Claude Code establish a durable collaboration layer through global rules in `~/.claude/` and project-local memory in `.assistant/`.
 
 ## Why This Exists
 
@@ -121,8 +121,17 @@ Claude Code reads the durable file structure instead of depending only on epheme
 
 ## What's Included
 
-- [SKILL.md](./SKILL.md)  
-  The main bootstrap prompt for Claude Code.
+- [BOOTSTRAP_PROMPT.md](./BOOTSTRAP_PROMPT.md)  
+  The main bootstrap prompt you send to Claude Code.
+
+- [RESET_GUIDE.md](./RESET_GUIDE.md)  
+  Reset and recovery guide for rebuilding the memory system.
+
+- [scripts/show-bootstrap.sh](./scripts/show-bootstrap.sh)  
+  Prints the bootstrap prompt locally.
+
+- [scripts/show-reset.sh](./scripts/show-reset.sh)  
+  Prints the reset guide locally.
 
 - [README.zh-CN.md](./README.zh-CN.md)  
   Chinese documentation.
@@ -130,10 +139,35 @@ Claude Code reads the durable file structure instead of depending only on epheme
 - [LICENSE](./LICENSE)  
   MIT license.
 
+## Deploy
+
+1. Clone or download this repository.
+2. Open `BOOTSTRAP_PROMPT.md`, or print it with:
+
+```bash
+./scripts/show-bootstrap.sh
+```
+
+3. Start Claude Code in the target workspace.
+4. Paste the prompt into Claude Code in one message.
+5. Let Claude inspect the workspace, initialize memory, and begin lightweight bootstrap.
+
+## Package Layout
+
+```text
+BOOTSTRAP_PROMPT.md
+RESET_GUIDE.md
+scripts/
+  show-bootstrap.sh
+  show-reset.sh
+```
+
+This repository is now organized as a lightweight Claude deployment pack rather than only a nested prompt file.
+
 ## Quick Start
 
-1. Open [SKILL.md](./SKILL.md).
-2. Copy the full `text` code block.
+1. Open [BOOTSTRAP_PROMPT.md](./BOOTSTRAP_PROMPT.md).
+2. Copy the full prompt.
 3. Start Claude Code in your target workspace.
 4. Send the prompt in one message.
 5. Let Claude Code inspect the workspace, update config, and start lightweight bootstrap if needed.
