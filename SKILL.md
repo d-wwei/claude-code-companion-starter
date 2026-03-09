@@ -1,3 +1,8 @@
+---
+name: Claude Code Companion Bootstrap
+description: Automatically initializes Claude Code as a long-term personal assistant system with global and project-level memory.
+---
+
 # Claude Code 个人助理一键初始化
 
 > 把这段提示词发给 Claude Code，它会一次性完成全局层 + 项目层的初始化，然后自动进入 bootstrap 对话。

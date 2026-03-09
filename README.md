@@ -118,7 +118,7 @@ Claude Code reads the durable file structure instead of depending only on epheme
 
 ## What's Included
 
-- [claude-code-companion-bootstrap.md](./claude-code-companion-bootstrap.md)  
+- [SKILL.md](./SKILL.md)  
   The main bootstrap prompt for Claude Code.
 
 - [README.zh-CN.md](./README.zh-CN.md)  
@@ -129,7 +129,7 @@ Claude Code reads the durable file structure instead of depending only on epheme
 
 ## Quick Start
 
-1. Open [claude-code-companion-bootstrap.md](./claude-code-companion-bootstrap.md).
+1. Open [SKILL.md](./SKILL.md).
 2. Copy the full `text` code block.
 3. Start Claude Code in your target workspace.
 4. Send the prompt in one message.
