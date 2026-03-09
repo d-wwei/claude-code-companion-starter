@@ -34,6 +34,11 @@ description: Automatically initializes Claude Code as a long-term personal assis
 - 如果是 `/tmp`、`/` 等其他非项目目录，问我是否切换再初始化。如果我不切换或中止，立刻停止执行第二步和第三步。
 - 全局层 `~/.claude/` 不受此限制，直接创建
 
+全局快速模式补充规则：
+- 在该模式下，默认所有已确认的身份、风格、工作流、长期偏好都直接写入 `~/.claude/` 对应全局文件
+- 不创建项目层记忆
+- 不触发“是否同步到全局配置”的二次确认，因为当前写入目标本身就是全局记忆
+
 兼容性检查：
 - 写 `CLAUDE.md` 前，先测试当前 Claude Code 是否支持 `@` 导入语法
 - 如果支持，按下方拆分写入多个文件
@@ -143,23 +148,52 @@ If a workspace is missing core assistant files (USER.md, STYLE.md, WORKFLOW.md, 
 - How to address the user → check `~/.claude/global-user.md` first
 - Role / identity in this workspace → if global identity exists, ask "Is your role the same here, or different?"
 - Response style: concise-direct or detailed-analytical → check `~/.claude/global-style.md` first
+- When task intent is ambiguous: should the assistant ask first, or make a reasonable assumption and move forward
 
 ### Round 2 (should ask — skip if global profile already has the answer)
-- Common recurring tasks
+- Primary profession / long-term identity
+- Common recurring tasks or project types
+- Preferred assistant role: executor, research partner, project manager, reminder/coach, or a mix
+- Common language, timezone, and stable work rhythm if relevant
 - Tool and networking preferences
 - Collaboration style expectations
 
 ### Later (accumulate naturally)
+- Preferred output format: short conclusion, bullets, tables, long analysis, action checklist
+- Whether to default to next steps / risk callouts / decision suggestions
 - Memory boundaries, long-term vs short-term preferences, disliked phrasing
+- What should always be remembered, what should be re-confirmed, what should never be stored
 
 ## Global profile sync
 - If `~/.claude/global-user.md` already contains user identity, greet the user by name and skip identity questions.
 - If bootstrap collects new identity info and no global profile exists yet, ask the user: "要把这些信息同步到全局配置吗？这样以后新项目会自动继承。"
 - If the user agrees, write to the corresponding `~/.claude/global-*.md` files.
+- If the current working mode is the global quick mode under `$HOME`, do NOT ask this sync question, because the assistant is already writing directly into the global files under `~/.claude/`.
 
 ## During bootstrap
 - Ask if the user needs custom templates beyond the defaults (weekly report, JD optimization, meeting summary).
 - Create additional templates as requested.
+- Do not turn bootstrap into a long questionnaire; ask only 1-3 high-value questions per turn.
+- Prioritize questions that will materially change future collaboration quality.
+- If some preferences can be learned naturally from real work, defer them instead of front-loading everything.
+- Recommended first-round interview script:
+  - Round 1:
+    - "我先用最少的问题把默认协作方式定下来。你希望我怎么称呼你？"
+    - "默认情况下，你更喜欢我回答得简洁直接，还是先给结论再展开？"
+  - Round 2:
+    - "你更希望我平时像执行搭子、研究助手、项目推进者，还是提醒监督者？如果是组合，也可以直接说。"
+    - "如果你的需求有点模糊，你更喜欢我先问一句确认，还是先做合理假设推进？"
+  - Round 3:
+    - "你平时主要在做哪几类事情？比如写代码、产品设计、内容写作、研究、管理，或者别的。"
+    - "有没有什么我应该长期记住的偏好，或者你明确不喜欢的表达和行为？"
+  - Optional follow-up if still missing key boundaries:
+    - "还有一个我想提前知道：哪些信息可以长期记住，哪些事情你希望我每次都先确认？"
+  - Reuse known global facts first and skip any question already answered in memory.
+- Map collected information as follows:
+  - identity, name, language, timezone, long-term background → `~/.claude/global-user.md` or project `USER.md`
+  - tone, brevity, formatting, disliked phrasing → `~/.claude/global-style.md` or project `STYLE.md`
+  - workflows, task patterns, decision preferences, template needs → `~/.claude/global-workflow.md` or project `WORKFLOW.md`
+  - stable reusable rules and memory boundaries → `~/.claude/global-memory.md` or project `MEMORY.md`
 
 ## Historical project scan (first-time bootstrap only)
 - Trigger condition: `~/.claude/global-projects-index.md` is empty or only has the example row, AND this is the user's first bootstrap.
@@ -265,21 +299,21 @@ When a promotable item is detected:
 # Global User Profile
 
 (This file will be populated during the first bootstrap session.)
-(It stores your identity across all projects: name, role, language, timezone, etc.)
+(It stores your identity across all projects: name, role, language, timezone, profession, long-term background, etc.)
 
 --- ~/.claude/global-style.md ---
 
 # Global Communication Style
 
 (This file will be populated during the first bootstrap session.)
-(It stores your preferred response style: concise vs detailed, tone, formatting, language preferences.)
+(It stores your preferred response style: concise vs detailed, tone, formatting, language preferences, output structure, disliked phrasing.)
 
 --- ~/.claude/global-workflow.md ---
 
 # Global Workflow Preferences
 
 (This file will be populated during the first bootstrap session.)
-(It stores your common workflows, report structures, decision preferences, recurring tasks.)
+(It stores your common workflows, report structures, decision preferences, recurring tasks, preferred assistant role, and template needs.)
 
 --- ~/.claude/global-memory.md ---
 
@@ -401,7 +435,7 @@ This file is an auto-maintained index for quick lookup. Do not manually edit unl
 3. 检查 BOOTSTRAP.md 的 status 字段
 4. 若 status 不是 completed：
    - 若全局用户画像已存在：用名字问候用户，跳过已知问题，只问项目特定信息
-   - 若全局用户画像不存在：开始完整 bootstrap 第一轮（称呼、角色、风格），收集后同步写入全局文件
+   - 若全局用户画像不存在：开始完整 bootstrap 第一轮（称呼、角色、风格、默认行动方式），并在后续轮次补充职业背景、工作类型、协作角色、输出偏好、记忆边界；收集后同步写入全局文件
 5. 若 status 是 completed，汇报初始化结果和当前记忆系统状态
 6. 确认 `~/.claude/global-projects-index.md` 中已有当前项目条目，若无则补充
 7. 若是首次 bootstrap（全局索引为空）：

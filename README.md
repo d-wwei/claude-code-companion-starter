@@ -31,6 +31,9 @@ This prompt transforms Claude Code from a powerful but amnesic one-shot tool int
 - **Global Memory Promotion:** As it discovers your habits and reusable knowledge during active projects, it can automatically promote them to your global profile.
 - **Project-Specific Customization:** Every project can have its own tailored rules and context that override the global defaults.
 - **Continuous Collaboration:** You never have to explain your background, structure, or current progress from scratch again when re-entering a workspace.
+- **Layered Bootstrap Interview:** The first-round interview now follows a compact 3-step script that captures name, style, assistant role, ambiguity handling, work types, and memory boundaries without turning startup into a form.
+- **Global Quick Mode:** When launched from `$HOME`, Claude initializes only the global layer and writes directly to `~/.claude/` without asking whether to sync those same facts again.
+- **Historical Project Scan:** On first-time setup, Claude can scan prior `.assistant/` workspaces and summarize discovered projects and sessions into the global index.
 
 ## Why OpenClaw-Inspired Memory For Claude Code
 
@@ -134,6 +137,14 @@ Claude Code reads the durable file structure instead of depending only on epheme
 3. Start Claude Code in your target workspace.
 4. Send the prompt in one message.
 5. Let Claude Code inspect the workspace, update config, and start lightweight bootstrap if needed.
+
+## Recent Improvements
+
+- richer first-round user interview for long-term collaboration
+- explicit global quick mode behavior under `$HOME`
+- no redundant "sync to global" prompt while already writing global files
+- clearer first-time historical project scan workflow
+- tighter alignment between bootstrap questions, memory promotion, and reporting
 
 ## How This Prompt Is Positioned
 
