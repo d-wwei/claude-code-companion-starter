@@ -93,7 +93,7 @@ For each new task in a workspace, read in this order when available:
 1. Global user profile (`~/.claude/global-user.md`, `global-style.md`, `global-workflow.md`, `global-memory.md`)
 2. Global projects index (`~/.claude/global-projects-index.md`) — for cross-project context awareness
 3. `.assistant/SYSTEM.md`
-4. relevant module-local `PROGRESS.md` if the task appears to be an interrupted or ongoing implementation
+4. relevant module-local `PROGRESS.md` if the task appears to be interrupted or ongoing work
 5. `.assistant/USER.md` (project override — if exists and non-empty, overrides global-user.md)
 6. `.assistant/STYLE.md` (project override — if exists and non-empty, overrides global-style.md)
 7. `.assistant/WORKFLOW.md` (project override — if exists and non-empty, overrides global-workflow.md)
@@ -226,7 +226,7 @@ passwords, secrets, API keys, tokens, ID numbers, bank info, private health info
 - **MEMORY.md**: stable long-term preferences, collaboration rules, high-value reusable facts
 - **memory/projects/*.md**: project goals, constraints, decisions, cross-session context, next steps
 - **memory/daily/YYYY-MM-DD.md**: today's context, temporary notes, unconfirmed facts, one-off fragments
-- **module-local `PROGRESS.md`**: task-level implementation checkpoint for resumable work inside the active module directory
+- **module-local `PROGRESS.md`**: task-level checkpoint for resumable work inside the active module directory
 - **runtime/inbox.md**: follow-ups, reminders, pending confirmations, short action items
 - **runtime/last-session.md**: last session summary, blockers, recommended next step
 
@@ -234,9 +234,47 @@ passwords, secrets, API keys, tokens, ID numbers, bank info, private health info
 Update `last-session.md` when a task is finished, when the user says "结束/归档/done", or when switching sessions. Do NOT update on every turn.
 
 ## Task progress checkpoint rules
-- For any implementation task that spans multiple acceptance items, files, or verification steps, create or update a nearby `PROGRESS.md`.
+- For any non-trivial ongoing task, create or update a nearby `PROGRESS.md`.
 - Place `PROGRESS.md` in the actual module or task directory being edited, not in `~/.claude/` and not as a substitute for `.assistant/runtime/last-session.md`.
-- Use this default structure:
+- First choose the template by task type:
+  - generic template: content production, video editing, research, operations, design, mixed project work
+  - development template: software implementation tasks with explicit acceptance items, file changes, or verification steps
+- Generic template:
+
+  ```md
+  status: in_progress
+  task: Produce launch video cut
+  module_path: content/video-launch/
+  project_type: video-editing
+
+  # 任务进度
+
+  ## 已完成
+  - [x] 确认视频目标、时长和发布渠道
+  - [x] 整理可用素材与配音版本
+
+  ## 进行中
+  - [ ] 精剪主版本时间线并对齐字幕
+
+  ## 待做
+  - [ ] 输出 16:9 主版本
+  - [ ] 裁切 9:16 短视频版本
+  - [ ] 完成最终审校并导出交付文件
+
+  ## 关键决策
+  - 主版本控制在 90 秒内，优先保留产品演示镜头
+  - 字幕风格统一使用品牌模板，避免重新设计一套样式
+
+  ## 已知问题
+  - 第三段配音底噪偏重，可能需要降噪或重录
+
+  ## 关键文件 / 素材
+  - raw/interview-a-roll/
+  - edits/launch-main.prproj
+  - assets/subtitles/final-cn.srt
+  ```
+
+- Development template:
 
   ```md
   status: in_progress
@@ -266,8 +304,9 @@ Update `last-session.md` when a task is finished, when the user says "结束/归
   - 当前模块还没有验证“多个候选进度文件”时的选择行为
   ```
 
-- Optionally add a very small header for `status`, task name, or module path.
-- Update it only when:
+- Optionally add a very small header for `status`, task name, module path, or project type.
+- Generic template: update when a milestone is completed, the active stage changes, a blocker appears, or before handoff/interruption.
+- Development template: update when:
   - an acceptance item is completed
   - the active step changes
   - a blocker appears
@@ -447,7 +486,7 @@ This file is an auto-maintained index for quick lookup. Do not manually edit unl
     inbox.md       — short-lived action items
     last-session.md — last session summary
 
-Outside `.assistant/`, create a local `PROGRESS.md` inside the active module directory whenever implementation work is multi-step and likely to need interruption-safe recovery.
+Outside `.assistant/`, create a local `PROGRESS.md` inside the active module directory whenever ongoing work is multi-step and likely to need interruption-safe recovery.
 
 ## Inheritance rules
 - Project files override global files only when they have substantive content.
@@ -459,7 +498,7 @@ Outside `.assistant/`, create a local `PROGRESS.md` inside the active module dir
 - Core files empty → bootstrap and fill.
 - Already active → read and use, don't re-ask known info.
 - First-ever bootstrap → also populate `~/.claude/global-*.md` files.
-- If an active implementation task already has a nearby `PROGRESS.md`, read and reuse it before starting new work.
+- If an active task already has a nearby `PROGRESS.md`, read and reuse it before starting new work.
 
 ## Git safety
 - If current dir is a Git repo, ensure `.assistant/` is in `.gitignore`.
@@ -491,9 +530,10 @@ Outside `.assistant/`, create a local `PROGRESS.md` inside the active module dir
 - 三个模板文件：各写一个简洁的默认结构即可
 - runtime 文件：各写一个最小模板
 - 创建今天的 daily 文件：memory/daily/YYYY-MM-DD.md
-- 多步实现任务：在相关模块目录维护简短 `PROGRESS.md`，用于断点恢复，不要写成长日志
-- `PROGRESS.md` 使用固定结构：`已完成 / 进行中 / 待做 / 关键决策 / 已知问题`
-- 每完成一个验收标准项就更新一次 `PROGRESS.md`
+- 多步任务：在相关模块目录维护简短 `PROGRESS.md`，用于断点恢复，不要写成长日志
+- 默认使用通用模板：`任务进度 / 已完成 / 进行中 / 待做 / 关键决策 / 已知问题 / 关键文件或素材`
+- 研发任务保留专用模板：`开发进度 / 已完成 / 进行中 / 待做 / 关键决策 / 已知问题`
+- 通用模板按阶段或里程碑更新；研发模板每完成一个验收标准项就更新一次
 - 恢复时按以下顺序定位 `PROGRESS.md`：当前工作目录 / 当前编辑模块 > 最近修改模块 > 用户点名模块 > 与任务关键词最匹配的模块
 - 若候选超过一个，只读取最相关的 1-2 个，并简短确认继续哪个模块
 - 如果是 Git 仓库，处理 .gitignore
