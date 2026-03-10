@@ -93,15 +93,16 @@ For each new task in a workspace, read in this order when available:
 1. Global user profile (`~/.claude/global-user.md`, `global-style.md`, `global-workflow.md`, `global-memory.md`)
 2. Global projects index (`~/.claude/global-projects-index.md`) — for cross-project context awareness
 3. `.assistant/SYSTEM.md`
-4. `.assistant/USER.md` (project override — if exists and non-empty, overrides global-user.md)
-5. `.assistant/STYLE.md` (project override — if exists and non-empty, overrides global-style.md)
-6. `.assistant/WORKFLOW.md` (project override — if exists and non-empty, overrides global-workflow.md)
-7. `.assistant/TOOLS.md`
-8. `.assistant/MEMORY.md` (project-level memory, supplements global-memory.md)
-9. relevant `.assistant/memory/projects/*.md`
-10. today's `.assistant/memory/daily/YYYY-MM-DD.md`
-11. `.assistant/runtime/inbox.md`
-12. `.assistant/runtime/last-session.md`
+4. relevant module-local `PROGRESS.md` if the task appears to be an interrupted or ongoing implementation
+5. `.assistant/USER.md` (project override — if exists and non-empty, overrides global-user.md)
+6. `.assistant/STYLE.md` (project override — if exists and non-empty, overrides global-style.md)
+7. `.assistant/WORKFLOW.md` (project override — if exists and non-empty, overrides global-workflow.md)
+8. `.assistant/TOOLS.md`
+9. `.assistant/MEMORY.md` (project-level memory, supplements global-memory.md)
+10. relevant `.assistant/memory/projects/*.md`
+11. today's `.assistant/memory/daily/YYYY-MM-DD.md`
+12. `.assistant/runtime/inbox.md`
+13. `.assistant/runtime/last-session.md`
 
 ## Inheritance model
 - Global user files (`~/.claude/global-*.md`) are the **baseline identity** — they define who the user is across all projects.
@@ -119,7 +120,7 @@ For each new task in a workspace, read in this order when available:
 - When the user updates identity info during any project bootstrap, ask whether to also update the global profile.
 
 ## Quick review
-When the user says "查看我的配置", "回顾当前规则", "review my setup", or similar, output a concise summary of: USER.md identity, STYLE.md preferences, MEMORY.md entry count, inbox.md pending count, BOOTSTRAP.md status, last-session.md summary.
+When the user says "查看我的配置", "回顾当前规则", "review my setup", or similar, output a concise summary of: USER.md identity, STYLE.md preferences, MEMORY.md entry count, inbox.md pending count, BOOTSTRAP.md status, active `PROGRESS.md` if any, last-session.md summary.
 
 --- ~/.claude/bootstrap-rules.md ---
 
@@ -225,11 +226,75 @@ passwords, secrets, API keys, tokens, ID numbers, bank info, private health info
 - **MEMORY.md**: stable long-term preferences, collaboration rules, high-value reusable facts
 - **memory/projects/*.md**: project goals, constraints, decisions, cross-session context, next steps
 - **memory/daily/YYYY-MM-DD.md**: today's context, temporary notes, unconfirmed facts, one-off fragments
+- **module-local `PROGRESS.md`**: task-level implementation checkpoint for resumable work inside the active module directory
 - **runtime/inbox.md**: follow-ups, reminders, pending confirmations, short action items
 - **runtime/last-session.md**: last session summary, blockers, recommended next step
 
 ## Session summary write timing
 Update `last-session.md` when a task is finished, when the user says "结束/归档/done", or when switching sessions. Do NOT update on every turn.
+
+## Task progress checkpoint rules
+- For any implementation task that spans multiple acceptance items, files, or verification steps, create or update a nearby `PROGRESS.md`.
+- Place `PROGRESS.md` in the actual module or task directory being edited, not in `~/.claude/` and not as a substitute for `.assistant/runtime/last-session.md`.
+- Use this default structure:
+
+  ```md
+  status: in_progress
+  task: Add task-level progress recovery
+  module_path: packages/assistant-memory/
+
+  # 开发进度
+
+  ## 已完成
+  - [x] 明确 `PROGRESS.md` 使用模块局部文件而不是 `.assistant/`
+  - [x] 加入恢复口令：继续上次进度 / 恢复进度
+  - [x] 定义恢复时的候选定位顺序
+
+  ## 进行中
+  - [ ] 把恢复逻辑接入当前模块的初始化流程
+
+  ## 待做
+  - [ ] 补充恢复话术模板
+  - [ ] 增加多候选 `PROGRESS.md` 的确认逻辑
+  - [ ] 完成一次中断恢复流程验证
+
+  ## 关键决策
+  - `PROGRESS.md` 放在实际模块目录，避免所有任务共用一份中心状态文件
+  - 恢复时只读取最相关的 1-2 个候选，减少 token 消耗
+
+  ## 已知问题
+  - 当前模块还没有验证“多个候选进度文件”时的选择行为
+  ```
+
+- Optionally add a very small header for `status`, task name, or module path.
+- Update it only when:
+  - an acceptance item is completed
+  - the active step changes
+  - a blocker appears
+  - the process is about to hand off or stop unexpectedly
+- Do not turn `PROGRESS.md` into a diary, chat log, or duplicate of Git diff output.
+- When resuming and a relevant `PROGRESS.md` exists with unfinished work, summarize: done / current step / next step, then ask the user whether to continue from that checkpoint.
+- When the task is finished, mark `status: completed`. Optionally keep the final checklist for audit, but avoid reopening completed work by default.
+- Support explicit recovery commands such as "继续上次进度", "恢复进度", "resume progress", or "continue from progress".
+- Locate the relevant `PROGRESS.md` in this order:
+  - current working directory or actively edited module
+  - most recently modified module
+  - user-named module or feature scope
+  - best keyword-matching module
+- If multiple candidates remain, read only the top 1-2 and briefly ask the user which module to continue. Do not scan every `PROGRESS.md` in the repository.
+- Use this standard resume wording:
+
+  ```text
+  我找到了这份进度记录：
+  - 已完成：...
+  - 进行中：...
+  - 下一步：...
+
+  要我按这份进度继续吗？
+  ```
+
+- If there is a blocker, switch `进行中` to `当前卡点`.
+- If there are multiple candidates, summarize each in one line and ask which one to continue.
 
 ## Global index update timing
 - When a new `.assistant/` is initialized → add a project entry to `~/.claude/global-projects-index.md`
@@ -382,6 +447,8 @@ This file is an auto-maintained index for quick lookup. Do not manually edit unl
     inbox.md       — short-lived action items
     last-session.md — last session summary
 
+Outside `.assistant/`, create a local `PROGRESS.md` inside the active module directory whenever implementation work is multi-step and likely to need interruption-safe recovery.
+
 ## Inheritance rules
 - Project files override global files only when they have substantive content.
 - Missing or placeholder-only project files → fall back to global.
@@ -392,6 +459,7 @@ This file is an auto-maintained index for quick lookup. Do not manually edit unl
 - Core files empty → bootstrap and fill.
 - Already active → read and use, don't re-ask known info.
 - First-ever bootstrap → also populate `~/.claude/global-*.md` files.
+- If an active implementation task already has a nearby `PROGRESS.md`, read and reuse it before starting new work.
 
 ## Git safety
 - If current dir is a Git repo, ensure `.assistant/` is in `.gitignore`.
@@ -423,6 +491,11 @@ This file is an auto-maintained index for quick lookup. Do not manually edit unl
 - 三个模板文件：各写一个简洁的默认结构即可
 - runtime 文件：各写一个最小模板
 - 创建今天的 daily 文件：memory/daily/YYYY-MM-DD.md
+- 多步实现任务：在相关模块目录维护简短 `PROGRESS.md`，用于断点恢复，不要写成长日志
+- `PROGRESS.md` 使用固定结构：`已完成 / 进行中 / 待做 / 关键决策 / 已知问题`
+- 每完成一个验收标准项就更新一次 `PROGRESS.md`
+- 恢复时按以下顺序定位 `PROGRESS.md`：当前工作目录 / 当前编辑模块 > 最近修改模块 > 用户点名模块 > 与任务关键词最匹配的模块
+- 若候选超过一个，只读取最相关的 1-2 个，并简短确认继续哪个模块
 - 如果是 Git 仓库，处理 .gitignore
 - 更新全局索引：在 `~/.claude/global-projects-index.md` 的 Projects 表中添加当前项目条目（name、path、status=active、created=今天、description=待补全）
 
@@ -433,11 +506,12 @@ This file is an auto-maintained index for quick lookup. Do not manually edit unl
 1. 逐个读取已创建的文件，确认内容正确写入；写入失败则重试
 2. 检查 `~/.claude/global-user.md` 是否已有用户信息
 3. 检查 BOOTSTRAP.md 的 status 字段
-4. 若 status 不是 completed：
+4. 如果当前任务属于中断恢复，优先检查相关模块目录下的 `PROGRESS.md`
+5. 若 status 不是 completed：
    - 若全局用户画像已存在：用名字问候用户，跳过已知问题，只问项目特定信息
    - 若全局用户画像不存在：开始完整 bootstrap 第一轮（称呼、角色、风格、默认行动方式），并在后续轮次补充职业背景、工作类型、协作角色、输出偏好、记忆边界；收集后同步写入全局文件
-5. 若 status 是 completed，汇报初始化结果和当前记忆系统状态
-6. 确认 `~/.claude/global-projects-index.md` 中已有当前项目条目，若无则补充
+6. 若 status 是 completed，汇报初始化结果和当前记忆系统状态
+7. 确认 `~/.claude/global-projects-index.md` 中已有当前项目条目，若无则补充
 7. 若是首次 bootstrap（全局索引为空）：
    - 询问用户是否扫描历史项目和会话
    - 用户选"是"→ 执行扫描并填充索引，完成后展示结果

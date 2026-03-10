@@ -31,6 +31,7 @@ This prompt transforms Claude Code from a powerful but amnesic one-shot tool int
 - **Global Memory Promotion:** As it discovers your habits and reusable knowledge during active projects, it can automatically promote them to your global profile.
 - **Project-Specific Customization:** Every project can have its own tailored rules and context that override the global defaults.
 - **Continuous Collaboration:** You never have to explain your background, structure, or current progress from scratch again when re-entering a workspace.
+- **Task-Level Resume Checkpoints:** For multi-step implementation work, Claude can maintain a module-local `PROGRESS.md` so a new process can resume from the last accepted step instead of reconstructing progress from chat.
 - **Layered Bootstrap Interview:** The first-round interview now follows a compact 3-step script that captures name, style, assistant role, ambiguity handling, work types, and memory boundaries without turning startup into a form.
 - **Global Quick Mode:** When launched from `$HOME`, Claude initializes only the global layer and writes directly to `~/.claude/` without asking whether to sync those same facts again.
 - **Historical Project Scan:** On first-time setup, Claude can scan prior `.assistant/` workspaces and summarize discovered projects and sessions into the global index.
@@ -85,6 +86,8 @@ Auto-created per project:
     last-session.md  — last session summary
 ```
 
+For non-trivial implementation work, Claude should also maintain a short `PROGRESS.md` in the active module or task directory. That file is task-local, not part of the shared `.assistant/` skeleton.
+
 The result is not "turning Claude Code into OpenClaw". The result is giving Claude Code a more structured memory surface so it can feel less stateless and more like a repeatable collaborator.
 
 ## What This Changes
@@ -107,6 +110,54 @@ The result is not "turning Claude Code into OpenClaw". The result is giving Clau
 
 4. Workflow becomes personalized.  
    If you prefer "inspect first, explain the change briefly, then report verification", that can live in `.assistant/WORKFLOW.md`.
+
+5. Interrupted implementation can resume cleanly.  
+   A nearby `PROGRESS.md` can record which acceptance items are done, what is currently in progress, and what the next concrete step should be for the next Claude process.
+
+The recommended `PROGRESS.md` shape is:
+
+```md
+status: in_progress
+task: Add task-level progress recovery
+module_path: packages/assistant-memory/
+
+# 开发进度
+
+## 已完成
+- [x] 明确 `PROGRESS.md` 使用模块局部文件而不是 `.assistant/`
+- [x] 加入恢复口令：继续上次进度 / 恢复进度
+- [x] 定义恢复时的候选定位顺序
+
+## 进行中
+- [ ] 把恢复逻辑接入当前模块的初始化流程
+
+## 待做
+- [ ] 补充恢复话术模板
+- [ ] 增加多候选 `PROGRESS.md` 的确认逻辑
+- [ ] 完成一次中断恢复流程验证
+
+## 关键决策
+- `PROGRESS.md` 放在实际模块目录，避免所有任务共用一份中心状态文件
+- 恢复时只读取最相关的 1-2 个候选，减少 token 消耗
+
+## 已知问题
+- 当前模块还没有验证“多个候选进度文件”时的选择行为
+```
+
+Update it every time an acceptance item is completed. For explicit recovery, the user can say `继续上次进度`, `恢复进度`, `resume progress`, or `continue from progress`.
+
+When recovering, the assistant should locate the most relevant `PROGRESS.md` in this order: current working directory, most recently modified module, user-named module, then best keyword-matching module. It should read only the top 1-2 candidates instead of scanning every progress file in the repo.
+
+The recommended resume wording is:
+
+```text
+我找到了这份进度记录：
+- 已完成：...
+- 进行中：...
+- 下一步：...
+
+要我按这份进度继续吗？
+```
 
 ## How It Works
 
@@ -179,6 +230,7 @@ This repository is now organized as a lightweight Claude deployment pack rather 
 - no redundant "sync to global" prompt while already writing global files
 - clearer first-time historical project scan workflow
 - tighter alignment between bootstrap questions, memory promotion, and reporting
+- task-level `PROGRESS.md` checkpoints for interrupted implementation work
 
 ## How This Prompt Is Positioned
 
@@ -192,7 +244,7 @@ It is best understood as a structured full setup version:
 
 ## Built-in Optimizations
 
-The prompt includes 15 production-hardened optimizations:
+The prompt includes 16 production-hardened optimizations:
 
 1. `@` import compatibility detection + merged fallback
 2. Idempotency check (3-line content rule)
@@ -209,6 +261,7 @@ The prompt includes 15 production-hardened optimizations:
 13. Workspace confirmation (prevents `.assistant/` in non-project dirs)
 14. HOME directory global-only mode (uses `~/.claude/` directly, skips `.assistant/`)
 15. Global Memory Promotion (syncs reusable knowledge from projects to global memory with 4 strategies: sync once / keep local / always sync / never sync)
+16. Module-local `PROGRESS.md` checkpoints for interrupted task recovery
 
 ## Design Principles
 
