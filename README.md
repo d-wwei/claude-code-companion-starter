@@ -35,6 +35,7 @@ This prompt transforms Claude Code from a powerful but amnesic one-shot tool int
 - **Global Memory Promotion:** As it discovers your habits and reusable knowledge during active projects, it can automatically promote them to your global profile.
 - **Project-Specific Customization:** Every project can have its own tailored rules and context that override the global defaults.
 - **Fast Recall:** Helps Claude quickly recall your background, working style, recent decisions, and unfinished context when you re-enter a workspace.
+- **Structured Quick Recall:** Uses `.assistant/runtime/active-task.md`, `interrupted-tasks.md`, and `resume-protocol.md` to recover the current main task first, then show the rest of the paused queue in a stable format.
 - **Task-Level Resume Checkpoints:** For multi-step work of many kinds, Claude can maintain a module-local `PROGRESS.md` so a new process can resume from the last accepted step or milestone instead of reconstructing progress from chat.
 - **Layered Bootstrap Interview:** The first-round interview now follows a compact 3-step script that captures name, style, assistant role, ambiguity handling, work types, and memory boundaries without turning startup into a form.
 - **Global Quick Mode:** When launched from `$HOME`, Claude initializes only the global layer and writes directly to `~/.claude/` without asking whether to sync those same facts again.
@@ -88,11 +89,50 @@ Auto-created per project:
   runtime/
     inbox.md         — short-lived action items
     last-session.md  — last session summary
+    active-task.md   — current main task for fast recovery
+    interrupted-tasks.md — paused task queue in priority order
+    resume-protocol.md — hard rules for the first recovery reply
+    resume-checkpoint-template.md — schema for named handoff checkpoints
 ```
 
 For non-trivial ongoing work, Claude should also maintain a short `PROGRESS.md` in the active module or task directory. That file is task-local, not part of the shared `.assistant/` skeleton.
 
 The result is not "turning Claude Code into OpenClaw". The result is giving Claude Code a more structured memory surface so it can feel less stateless and more like a repeatable collaborator.
+
+## Fast Recall Protocol
+
+The latest recall flow separates workspace-level interruption routing from module-level `PROGRESS.md` checkpoints.
+
+- `.assistant/runtime/active-task.md` keeps the current highest-priority main task.
+- `.assistant/runtime/interrupted-tasks.md` keeps the rest of the paused queue in priority order.
+- `.assistant/runtime/resume-protocol.md` defines the hard rules for the first recovery reply.
+- `.assistant/runtime/resume-checkpoint-template.md` provides a reusable schema for named handoff checkpoints.
+
+When the user says things like `continue`, `resume`, `刚才做到哪里了`, or `恢复刚才的任务`, Claude should first read `active-task.md`, then reply in three compact sections:
+
+```text
+A. 当前主任务
+task: ...
+progress: ...
+next step: ...
+
+---
+
+B. 其他中断任务
+task: ...
+priority: P2
+progress: ...
+next step: ...
+
+---
+
+C. 恢复选项
+1. 继续当前主任务
+2. 切换到 P2 ...
+3. 切换到 P3 ...
+```
+
+This makes recovery faster, keeps the first response readable, and lets the user switch directly into another paused task without a long explanation pass first.
 
 ## What This Changes
 

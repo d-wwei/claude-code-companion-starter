@@ -93,7 +93,7 @@ For each new task in a workspace, read in this order when available:
 1. Global user profile (`~/.claude/global-user.md`, `global-style.md`, `global-workflow.md`, `global-memory.md`)
 2. Global projects index (`~/.claude/global-projects-index.md`) — for cross-project context awareness
 3. `.assistant/SYSTEM.md`
-4. relevant module-local `PROGRESS.md` if the task appears to be interrupted or ongoing work
+4. `.assistant/runtime/active-task.md` and `.assistant/runtime/resume-protocol.md` if the task appears to be interrupted or ongoing work
 5. `.assistant/USER.md` (project override — if exists and non-empty, overrides global-user.md)
 6. `.assistant/STYLE.md` (project override — if exists and non-empty, overrides global-style.md)
 7. `.assistant/WORKFLOW.md` (project override — if exists and non-empty, overrides global-workflow.md)
@@ -103,6 +103,7 @@ For each new task in a workspace, read in this order when available:
 11. today's `.assistant/memory/daily/YYYY-MM-DD.md`
 12. `.assistant/runtime/inbox.md`
 13. `.assistant/runtime/last-session.md`
+14. relevant module-local `PROGRESS.md` only after the workspace-level recovery files if deeper task detail is needed
 
 ## Inheritance model
 - Global user files (`~/.claude/global-*.md`) are the **baseline identity** — they define who the user is across all projects.
@@ -229,6 +230,10 @@ passwords, secrets, API keys, tokens, ID numbers, bank info, private health info
 - **module-local `PROGRESS.md`**: task-level checkpoint for resumable work inside the active module directory
 - **runtime/inbox.md**: follow-ups, reminders, pending confirmations, short action items
 - **runtime/last-session.md**: last session summary, blockers, recommended next step
+- **runtime/active-task.md**: the single highest-priority live task for fast re-entry
+- **runtime/interrupted-tasks.md**: the paused task queue in priority order
+- **runtime/resume-protocol.md**: hard rules for the first recovery reply
+- **runtime/resume-checkpoint-template.md**: template for named resume checkpoints or handoff notes
 
 ## Session summary write timing
 Update `last-session.md` when a task is finished, when the user says "结束/归档/done", or when switching sessions. Do NOT update on every turn.
@@ -331,6 +336,27 @@ Update `last-session.md` when a task is finished, when the user says "结束/归
 
   要我按这份进度继续吗？
   ```
+
+## Workspace-level quick recall protocol
+- In addition to module-local `PROGRESS.md`, maintain `.assistant/runtime/active-task.md`, `.assistant/runtime/interrupted-tasks.md`, and `.assistant/runtime/resume-protocol.md` for workspace-level interruption routing.
+- When the user says things like "continue", "resume", "刚才做到哪里了", or "恢复刚才的任务", read `active-task.md` first and avoid deep checkpoint scans before the first reply.
+- Prefer the user's default language for the first recovery reply unless they explicitly switch.
+- The first recovery reply should use exactly three sections in this order:
+  - `A. 当前主任务`
+  - `B. 其他中断任务`
+  - `C. 恢复选项`
+- Insert `---` between sections.
+- Section A should contain exactly:
+  - `task: ...`
+  - `progress: ...`
+  - `next step: ...`
+- Section B should list all other interrupted tasks in priority order, and each task should contain:
+  - `task: ...`
+  - `priority: P2`
+  - `progress: ...`
+  - `next step: ...`
+- Section C should provide numbered choices in the active reply language so the user can continue the main task or switch directly to another paused task.
+- Keep the first recovery reply compact and do not put background explanation before section A.
 
 - If there is a blocker, switch `进行中` to `当前卡点`.
 - If there are multiple candidates, summarize each in one line and ask which one to continue.
@@ -485,6 +511,10 @@ This file is an auto-maintained index for quick lookup. Do not manually edit unl
   runtime/
     inbox.md       — short-lived action items
     last-session.md — last session summary
+    active-task.md — current main task for fast recovery
+    interrupted-tasks.md — paused task queue in priority order
+    resume-protocol.md — hard rules for the first recovery reply
+    resume-checkpoint-template.md — schema for named handoff checkpoints
 
 Outside `.assistant/`, create a local `PROGRESS.md` inside the active module directory whenever ongoing work is multi-step and likely to need interruption-safe recovery.
 
@@ -516,7 +546,8 @@ Outside `.assistant/`, create a local `PROGRESS.md` inside the active module dir
   SYSTEM.md, USER.md, STYLE.md, WORKFLOW.md, TOOLS.md, MEMORY.md, BOOTSTRAP.md, sync-policy.md
   memory/daily/  memory/projects/
   templates/weekly-report.md  templates/jd-optimize.md  templates/meeting-summary.md
-  runtime/inbox.md  runtime/last-session.md
+  runtime/inbox.md  runtime/last-session.md  runtime/active-task.md
+  runtime/interrupted-tasks.md  runtime/resume-protocol.md  runtime/resume-checkpoint-template.md
 
 写入规则：
 - SYSTEM.md：写入项目级规则（优先读 .assistant/、不存敏感信息、不确定标记 Pending confirmation、信息分层存储）
@@ -529,6 +560,10 @@ Outside `.assistant/`, create a local `PROGRESS.md` inside the active module dir
 - sync-policy.md：写入默认同步策略模板 `sync_default: ask`（每次询问），用户可通过对话改为 `always` 或 `never`
 - 三个模板文件：各写一个简洁的默认结构即可
 - runtime 文件：各写一个最小模板
+- `active-task.md`：记录当前最高优先级主任务，包含 task / status / last completed step / next step / blocking decision
+- `interrupted-tasks.md`：按优先级记录其他中断任务，包含 paused at / task / status / next step
+- `resume-protocol.md`：写入快速回想硬规则，要求首条恢复回复采用 A/B/C 三段式
+- `resume-checkpoint-template.md`：提供命名断点模板，字段至少包含 task / paused at / priority / status / last completed step / next step / blocking decision
 - 创建今天的 daily 文件：memory/daily/YYYY-MM-DD.md
 - 多步任务：在相关模块目录维护简短 `PROGRESS.md`，用于断点恢复，不要写成长日志
 - 默认使用通用模板：`任务进度 / 已完成 / 进行中 / 待做 / 关键决策 / 已知问题 / 关键文件或素材`
@@ -546,13 +581,14 @@ Outside `.assistant/`, create a local `PROGRESS.md` inside the active module dir
 1. 逐个读取已创建的文件，确认内容正确写入；写入失败则重试
 2. 检查 `~/.claude/global-user.md` 是否已有用户信息
 3. 检查 BOOTSTRAP.md 的 status 字段
-4. 如果当前任务属于中断恢复，优先检查相关模块目录下的 `PROGRESS.md`
-5. 若 status 不是 completed：
+4. 如果当前任务属于工作区级中断恢复，先检查 `runtime/active-task.md` 和 `runtime/resume-protocol.md`，再按需检查相关模块目录下的 `PROGRESS.md`
+5. 如果当前任务属于模块级中断恢复，优先检查相关模块目录下的 `PROGRESS.md`
+6. 若 status 不是 completed：
    - 若全局用户画像已存在：用名字问候用户，跳过已知问题，只问项目特定信息
    - 若全局用户画像不存在：开始完整 bootstrap 第一轮（称呼、角色、风格、默认行动方式），并在后续轮次补充职业背景、工作类型、协作角色、输出偏好、记忆边界；收集后同步写入全局文件
-6. 若 status 是 completed，汇报初始化结果和当前记忆系统状态
-7. 确认 `~/.claude/global-projects-index.md` 中已有当前项目条目，若无则补充
-7. 若是首次 bootstrap（全局索引为空）：
+7. 若 status 是 completed，汇报初始化结果和当前记忆系统状态
+8. 确认 `~/.claude/global-projects-index.md` 中已有当前项目条目，若无则补充
+9. 若是首次 bootstrap（全局索引为空）：
    - 询问用户是否扫描历史项目和会话
    - 用户选"是"→ 执行扫描并填充索引，完成后展示结果
    - 用户选"否"→ 跳过，索引从零开始自然积累
