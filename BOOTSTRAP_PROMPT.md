@@ -93,7 +93,7 @@ For each new task in a workspace, read in this order when available:
 1. Global user profile (`~/.claude/global-user.md`, `global-style.md`, `global-workflow.md`, `global-memory.md`)
 2. Global projects index (`~/.claude/global-projects-index.md`) — for cross-project context awareness
 3. `.assistant/SYSTEM.md`
-4. `.assistant/runtime/active-task.md` and `.assistant/runtime/resume-protocol.md` if the task appears to be interrupted or ongoing work
+4. `.assistant/runtime/active-task.md` — if the user is resuming or the task appears interrupted
 5. `.assistant/USER.md` (project override — if exists and non-empty, overrides global-user.md)
 6. `.assistant/STYLE.md` (project override — if exists and non-empty, overrides global-style.md)
 7. `.assistant/WORKFLOW.md` (project override — if exists and non-empty, overrides global-workflow.md)
@@ -103,7 +103,8 @@ For each new task in a workspace, read in this order when available:
 11. today's `.assistant/memory/daily/YYYY-MM-DD.md`
 12. `.assistant/runtime/inbox.md`
 13. `.assistant/runtime/last-session.md`
-14. relevant module-local `PROGRESS.md` only after the workspace-level recovery files if deeper task detail is needed
+14. `.assistant/memory/sessions/INDEX.md` — when searching for historical context
+15. relevant module-local `PROGRESS.md` only after the workspace-level recovery files if deeper task detail is needed
 
 ## Inheritance model
 - Global user files (`~/.claude/global-*.md`) are the **baseline identity** — they define who the user is across all projects.
@@ -121,7 +122,7 @@ For each new task in a workspace, read in this order when available:
 - When the user updates identity info during any project bootstrap, ask whether to also update the global profile.
 
 ## Quick review
-When the user says "查看我的配置", "回顾当前规则", "review my setup", or similar, output a concise summary of: USER.md identity, STYLE.md preferences, MEMORY.md entry count, inbox.md pending count, BOOTSTRAP.md status, active `PROGRESS.md` if any, last-session.md summary.
+When the user says "查看我的配置", "回顾当前规则", "review my setup", or similar, output a concise summary of: USER.md identity, STYLE.md preferences, MEMORY.md entry count, inbox.md pending count, BOOTSTRAP.md status, active-task.md current task, last-session.md summary.
 
 --- ~/.claude/bootstrap-rules.md ---
 
@@ -227,13 +228,11 @@ passwords, secrets, API keys, tokens, ID numbers, bank info, private health info
 - **MEMORY.md**: stable long-term preferences, collaboration rules, high-value reusable facts
 - **memory/projects/*.md**: project goals, constraints, decisions, cross-session context, next steps
 - **memory/daily/YYYY-MM-DD.md**: today's context, temporary notes, unconfirmed facts, one-off fragments
+- **memory/sessions/**: auto-archived session summaries (one file per session, plus INDEX.md for fast lookup)
 - **module-local `PROGRESS.md`**: task-level checkpoint for resumable work inside the active module directory
 - **runtime/inbox.md**: follow-ups, reminders, pending confirmations, short action items
 - **runtime/last-session.md**: last session summary, blockers, recommended next step
-- **runtime/active-task.md**: the single highest-priority live task for fast re-entry
-- **runtime/interrupted-tasks.md**: the paused task queue in priority order
-- **runtime/resume-protocol.md**: hard rules for the first recovery reply
-- **runtime/resume-checkpoint-template.md**: template for named resume checkpoints or handoff notes
+- **runtime/active-task.md**: current task state with execution context and interrupted task queue — the single anchor for session recovery
 
 ## Session summary write timing
 Update `last-session.md` when a task is finished, when the user says "结束/归档/done", or when switching sessions. Do NOT update on every turn.
@@ -337,29 +336,113 @@ Update `last-session.md` when a task is finished, when the user says "结束/归
   要我按这份进度继续吗？
   ```
 
-## Workspace-level quick recall protocol
-- In addition to module-local `PROGRESS.md`, maintain `.assistant/runtime/active-task.md`, `.assistant/runtime/interrupted-tasks.md`, and `.assistant/runtime/resume-protocol.md` for workspace-level interruption routing.
-- When the user says things like "continue", "resume", "刚才做到哪里了", or "恢复刚才的任务", read `active-task.md` first and avoid deep checkpoint scans before the first reply.
-- Prefer the user's default language for the first recovery reply unless they explicitly switch.
-- The first recovery reply should use exactly three sections in this order:
-  - `A. 当前主任务`
-  - `B. 其他中断任务`
-  - `C. 恢复选项`
-- Insert `---` between sections.
-- Section A should contain exactly:
-  - `task: ...`
-  - `progress: ...`
-  - `next step: ...`
-- Section B should list all other interrupted tasks in priority order, and each task should contain:
-  - `task: ...`
-  - `priority: P2`
-  - `progress: ...`
-  - `next step: ...`
-- Section C should provide numbered choices in the active reply language so the user can continue the main task or switch directly to another paused task.
-- Keep the first recovery reply compact and do not put background explanation before section A.
+## Quick recall protocol
+When the user says "继续", "resume", "刚才做到哪了", "continue", or equivalent recovery phrases:
 
-- If there is a blocker, switch `进行中` to `当前卡点`.
-- If there are multiple candidates, summarize each in one line and ask which one to continue.
+1. Read `runtime/active-task.md` — this is the single source of truth for session recovery
+2. Read `runtime/last-session.md` — for supplementary context
+3. If needed, scan `memory/sessions/INDEX.md` for recent sessions to fill gaps
+
+Output exactly three sections, separated by `---`:
+
+```
+**当前任务**: [任务名] — [进度] — [下一步]
+**上下文**: [关键决策和中间产出的一句话摘要]
+---
+**被中断的任务** (如有):
+- [任务名] — [暂停于] — [下一步]
+---
+**可选动作**: a) 继续主任务  b) 切换到被中断的任务  c) 查看详细执行上下文
+```
+
+Rules:
+- Keep the first recovery reply compact — no background before the task summary
+- Prefer the user's default language
+- If there is a blocker, replace progress with `当前卡点: ...`
+- If `active-task.md` is empty/idle, fall back to `last-session.md` and offer to review recent sessions
+
+## active-task.md format and write timing
+`active-task.md` is the single anchor for session recovery. It consolidates task state, execution context, and interrupted task queue in one file.
+
+Format:
+```markdown
+# Active Task
+task: [任务名称]
+status: in_progress | blocked | idle
+started: YYYY-MM-DD
+progress: [当前进度一句话]
+next_step: [下一步具体动作]
+
+## 执行上下文
+- 背景: [为什么做这件事]
+- 关键输入: [依赖的文件、文档、外部信息]
+- 已做决策: [关键技术/方向选择及理由]
+- 中间产出: [已生成的文件、代码、数据位置]
+- 待解决: [未完成的问题或风险]
+
+## 被中断的任务
+- [ ] [任务名] （暂停于: [进度], 下一步: [动作]）
+- [ ] [任务名] （暂停于: [进度], 下一步: [动作]）
+```
+
+Write timing — update `active-task.md` at these moments, not every turn:
+- 用户分配新任务时 → 写入任务名、状态设为 `in_progress`、记录执行上下文
+- 任务取得阶段性进展时 → 更新 progress、next_step 和执行上下文
+- 切换到另一个任务时 → 当前任务移入"被中断的任务"列表，新任务写入主区域
+- 遇到阻塞时 → status 改为 `blocked`，记录阻塞原因
+- 会话即将结束时 → 确保反映最新进度和下一步
+
+## Session auto-archiving
+Each session's key outcomes should be archived for future searchability.
+
+### Archive pipeline
+When a session ends (user says "结束/done/归档", or a task is completed):
+1. Write a session summary to `memory/sessions/YYYY-MM-DD-HHmm.md`:
+   ```markdown
+   # Session: YYYY-MM-DD HH:mm
+   project: [项目名]
+   duration: [估算时长]
+   tags: [tag1, tag2, tag3]
+
+   ## Summary
+   [2-3 句话概括本次会话]
+
+   ## Key outcomes
+   - [具体成果或决策]
+
+   ## Files changed
+   - [文件列表]
+   ```
+2. Append one row to `memory/sessions/INDEX.md`:
+   ```markdown
+   | Date | Duration | Project | Tags | Summary | File |
+   |---|---|---|---|---|---|
+   | YYYY-MM-DD HH:mm | 30min | project-name | auth,refactor | 一句话摘要 | YYYY-MM-DD-HHmm.md |
+   ```
+3. Update `runtime/last-session.md` as before
+4. Update `~/.claude/global-projects-index.md` Recent Sessions table
+
+### Session search
+When user asks about historical work ("上次做的XX", "之前那个项目", "find my work on..."):
+1. First read `memory/sessions/INDEX.md` — scan tags and summaries (fast, structured)
+2. If match found, read the specific session file for details
+3. Only fall back to scanning `memory/daily/` or full session files if INDEX.md doesn't have enough info
+This replaces brute-force grep over hundreds of files with a structured index lookup.
+
+### Optional: hook-based auto-export
+For teams or power users who want zero-effort archiving, add a Claude Code hook:
+```jsonc
+// ~/.claude/settings.json
+{
+  "hooks": {
+    "Stop": [{
+      "type": "command",
+      "command": "~/.claude/scripts/export-session.sh"
+    }]
+  }
+}
+```
+The script parses the latest JSONL session file, extracts user messages, and writes the session summary. This is optional — manual archiving via the assistant works without any external tools.
 
 ## Global index update timing
 - When a new `.assistant/` is initialized → add a project entry to `~/.claude/global-projects-index.md`
@@ -507,14 +590,12 @@ This file is an auto-maintained index for quick lookup. Do not manually edit unl
   memory/
     daily/         — short-lived daily context (YYYY-MM-DD.md)
     projects/      — project-level cross-session memory
+    sessions/      — auto-archived session summaries + INDEX.md for fast search
   templates/       — reusable starter templates (user can add/modify/remove)
   runtime/
     inbox.md       — short-lived action items
     last-session.md — last session summary
-    active-task.md — current main task for fast recovery
-    interrupted-tasks.md — paused task queue in priority order
-    resume-protocol.md — hard rules for the first recovery reply
-    resume-checkpoint-template.md — schema for named handoff checkpoints
+    active-task.md — current task state + execution context + interrupted task queue (single recovery anchor)
 
 Outside `.assistant/`, create a local `PROGRESS.md` inside the active module directory whenever ongoing work is multi-step and likely to need interruption-safe recovery.
 
@@ -544,10 +625,9 @@ Outside `.assistant/`, create a local `PROGRESS.md` inside the active module dir
 
 .assistant/
   SYSTEM.md, USER.md, STYLE.md, WORKFLOW.md, TOOLS.md, MEMORY.md, BOOTSTRAP.md, sync-policy.md
-  memory/daily/  memory/projects/
+  memory/daily/  memory/projects/  memory/sessions/
   templates/weekly-report.md  templates/jd-optimize.md  templates/meeting-summary.md
   runtime/inbox.md  runtime/last-session.md  runtime/active-task.md
-  runtime/interrupted-tasks.md  runtime/resume-protocol.md  runtime/resume-checkpoint-template.md
 
 写入规则：
 - SYSTEM.md：写入项目级规则（优先读 .assistant/、不存敏感信息、不确定标记 Pending confirmation、信息分层存储）
@@ -559,11 +639,10 @@ Outside `.assistant/`, create a local `PROGRESS.md` inside the active module dir
 - BOOTSTRAP.md：顶部写 `status: in_progress` + `started_at: 今天日期`，列出待补全问题和完成条件
 - sync-policy.md：写入默认同步策略模板 `sync_default: ask`（每次询问），用户可通过对话改为 `always` 或 `never`
 - 三个模板文件：各写一个简洁的默认结构即可
-- runtime 文件：各写一个最小模板
-- `active-task.md`：记录当前最高优先级主任务，包含 task / status / last completed step / next step / blocking decision
-- `interrupted-tasks.md`：按优先级记录其他中断任务，包含 paused at / task / status / next step
-- `resume-protocol.md`：写入快速回想硬规则，要求首条恢复回复采用 A/B/C 三段式
-- `resume-checkpoint-template.md`：提供命名断点模板，字段至少包含 task / paused at / priority / status / last completed step / next step / blocking decision
+- runtime 文件：
+  - `inbox.md`、`last-session.md`：各写一个最小模板
+  - `active-task.md`：按 memory-policy.md 中定义的格式写入完整默认内容（含 task/status/执行上下文/被中断的任务三个区域）
+- `memory/sessions/INDEX.md`：写入表头模板（Date / Duration / Project / Tags / Summary / File）
 - 创建今天的 daily 文件：memory/daily/YYYY-MM-DD.md
 - 多步任务：在相关模块目录维护简短 `PROGRESS.md`，用于断点恢复，不要写成长日志
 - 默认使用通用模板：`任务进度 / 已完成 / 进行中 / 待做 / 关键决策 / 已知问题 / 关键文件或素材`
@@ -581,7 +660,7 @@ Outside `.assistant/`, create a local `PROGRESS.md` inside the active module dir
 1. 逐个读取已创建的文件，确认内容正确写入；写入失败则重试
 2. 检查 `~/.claude/global-user.md` 是否已有用户信息
 3. 检查 BOOTSTRAP.md 的 status 字段
-4. 如果当前任务属于工作区级中断恢复，先检查 `runtime/active-task.md` 和 `runtime/resume-protocol.md`，再按需检查相关模块目录下的 `PROGRESS.md`
+4. 如果当前任务属于工作区级中断恢复，先检查 `runtime/active-task.md`（含执行上下文和被中断任务列表），再按需检查相关模块目录下的 `PROGRESS.md`
 5. 如果当前任务属于模块级中断恢复，优先检查相关模块目录下的 `PROGRESS.md`
 6. 若 status 不是 completed：
    - 若全局用户画像已存在：用名字问候用户，跳过已知问题，只问项目特定信息
