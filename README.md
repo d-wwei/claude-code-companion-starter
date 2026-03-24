@@ -29,6 +29,7 @@ Instead of assuming the model will remember everything, it uses the file system 
 
 This prompt transforms Claude Code from a powerful but amnesic one-shot tool into a long-term collaborator that builds rapport with you.
 
+- **Agent Self-Awareness:** The agent knows who it is — its name, personality, values, running environment, and communication channels — persisted in `global-agent-soul.md` and optionally overridden per project via `AGENT.md`.
 - **Long-term Memory Setup:** Automatically establishes persistent global rules (`~/.claude/`) and project-specific memory (`.assistant/`).
 - **Preference Accumulation:** Remembers how you like things done—your role, coding style, workflow, and recurring instructions.
 - **Session Handoff Continuity:** Keeps work resumable across interruptions, so the next session can continue from the right breakpoint instead of restarting from scratch.
@@ -63,6 +64,7 @@ This repository adapts that philosophy to Claude Code by combining:
 | File | Purpose |
 | --- | --- |
 | `CLAUDE.md` | Entry file, `@` imports other rules (auto-merges if `@` not supported) |
+| `global-agent-soul.md` | Agent self-awareness: identity, values, personality, boundaries, running environment |
 | `assistant-core.md` | Role behavior, read order, conflict resolution, quick review entry |
 | `bootstrap-rules.md` | Cold start rules: tiered questions, state tracking, completion persistence |
 | `memory-policy.md` | Memory write / conflict / cleanup / audit rules |
@@ -77,6 +79,7 @@ Auto-created per project:
 ```
 .assistant/
   SYSTEM.md          — workspace-level rules and safety boundaries
+  AGENT.md           — [optional] project-specific agent role/personality override
   USER.md            — who the user is: name, role, context, language
   STYLE.md           — communication style preferences
   WORKFLOW.md        — how work is done
@@ -308,6 +311,7 @@ This repository is now organized as a lightweight Claude deployment pack rather 
 
 ## Recent Improvements
 
+- **agent self-awareness** — `global-agent-soul.md` defines agent identity, values, personality, running environment, and IM channels; `AGENT.md` allows per-project personality overrides; bootstrap flow includes agent self-definition round
 - **proactive context loading** — Claude checks `active-task.md` at every session start and briefly mentions in-progress work
 - **unified session recovery** — single `active-task.md` replaces `interrupted-tasks.md`, `resume-protocol.md`, and `resume-checkpoint-template.md`
 - **session archive system** — `memory/sessions/` with `INDEX.md` for historical session lookup
@@ -330,7 +334,7 @@ It is best understood as a structured full setup version:
 
 ## Built-in Optimizations
 
-The prompt includes 19 production-hardened optimizations:
+The prompt includes 20 production-hardened optimizations:
 
 1. `@` import compatibility detection + merged fallback
 2. Idempotency check (3-line content rule)
@@ -351,6 +355,7 @@ The prompt includes 19 production-hardened optimizations:
 17. Proactive context loading (silently checks active task at session start)
 18. Unified `active-task.md` as single recovery anchor (replaces 4 separate runtime files)
 19. Session archive with indexed history (`memory/sessions/INDEX.md`)
+20. Agent self-awareness layer (`global-agent-soul.md` + per-project `AGENT.md`)
 
 ## Design Principles
 

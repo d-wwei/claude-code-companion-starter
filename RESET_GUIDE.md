@@ -6,7 +6,8 @@
 
 ```bash
 # 删除全局层配置（保留 ~/.claude/ 目录本身和非助理文件）
-rm -f ~/.claude/CLAUDE.md ~/.claude/assistant-core.md ~/.claude/bootstrap-rules.md \
+rm -f ~/.claude/CLAUDE.md ~/.claude/global-agent-soul.md \
+      ~/.claude/assistant-core.md ~/.claude/bootstrap-rules.md \
       ~/.claude/memory-policy.md ~/.claude/project-filesystem.md \
       ~/.claude/global-user.md ~/.claude/global-style.md \
       ~/.claude/global-workflow.md ~/.claude/global-memory.md \
